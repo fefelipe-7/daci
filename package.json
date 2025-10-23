@@ -4,11 +4,12 @@
   "description": "🤖 Bot multifuncional para Discord com sistema de personalidades dinâmicas, música multi-plataforma e comandos de moderação e diversão",
   "main": "bot.js",
   "scripts": {
-    "start": "node bot.js",
-    "dev": "nodemon bot.js",
-    "deploy": "node scripts/deploy-commands.js",
-    "deploy:guild": "node scripts/deploy-guild-commands.js",
-    "setup": "node scripts/setup.js"
+  "start": "node bot.js",
+  "dev": "nodemon bot.js",
+  "build": "npm install && node scripts/deploy-commands.js",
+  "deploy": "node scripts/deploy-commands.js",
+  "deploy:guild": "node scripts/deploy-guild-commands.js",
+  "setup": "node scripts/setup.js"
   },
   "keywords": [
     "discord",
