@@ -1,6 +1,8 @@
 const { createAudioPlayer, createAudioResource, AudioPlayerStatus, VoiceConnectionStatus, joinVoiceChannel } = require('@discordjs/voice');
-const play = require('play-dl');
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+
+// Lazy load play-dl
+let play;
 
 class MusicPlayer {
     async createConnection(voiceChannel, guildId) {
@@ -41,6 +43,9 @@ class MusicPlayer {
                 queue.connection = await this.createConnection(queue.voiceChannel, queue.guildId);
                 queue.connection.subscribe(queue.player);
             }
+
+            // Lazy load play-dl
+            if (!play) play = require('play-dl');
 
             // Criar stream de áudio
             console.log('🎵 Tocando:', song.title);

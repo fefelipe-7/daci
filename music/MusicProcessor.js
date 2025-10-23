@@ -1,6 +1,5 @@
-const play = require('play-dl');
-const { getData } = require('spotify-url-info');
-const YouTube = require('youtube-sr').default;
+// Lazy load - só carrega quando realmente usar
+let play, getData, YouTube;
 
 class MusicProcessor {
     constructor() {
@@ -29,6 +28,10 @@ class MusicProcessor {
 
     async processSpotify(url) {
         try {
+            // Lazy load
+            if (!getData) getData = require('spotify-url-info').getData;
+            if (!YouTube) YouTube = require('youtube-sr').default;
+
             // Verificar cache
             if (this.cache.has(url)) {
                 console.log('💾 Usando cache para:', url);
@@ -71,6 +74,9 @@ class MusicProcessor {
 
     async processYouTube(url) {
         try {
+            // Lazy load
+            if (!play) play = require('play-dl');
+
             console.log('🎵 Processando YouTube...');
             const info = await play.video_info(url);
             
@@ -91,6 +97,9 @@ class MusicProcessor {
 
     async processSoundCloud(url) {
         try {
+            // Lazy load
+            if (!play) play = require('play-dl');
+
             console.log('🎵 Processando SoundCloud...');
             const info = await play.soundcloud(url);
             
@@ -111,6 +120,9 @@ class MusicProcessor {
 
     async searchYouTube(query) {
         try {
+            // Lazy load
+            if (!YouTube) YouTube = require('youtube-sr').default;
+
             console.log('🔍 Buscando no YouTube:', query);
             const results = await YouTube.searchOne(query);
             

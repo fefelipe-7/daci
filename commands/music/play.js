@@ -1,8 +1,4 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const QueueManager = require('../../music/QueueManager');
-const MusicProcessor = require('../../music/MusicProcessor');
-const MusicPlayer = require('../../music/MusicPlayer');
-const { detectPlatform } = require('../../music/PlatformDetector');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -14,8 +10,14 @@ module.exports = {
                 .setRequired(true)),
 
     async execute(interaction) {
-        // Defer IMEDIATAMENTE para evitar timeout (3 segundos)
+        // Defer IMEDIATAMENTE ANTES de importar qualquer coisa pesada
         await interaction.deferReply();
+
+        // Lazy load - só carrega quando precisa
+        const QueueManager = require('../../music/QueueManager');
+        const MusicProcessor = require('../../music/MusicProcessor');
+        const MusicPlayer = require('../../music/MusicPlayer');
+        const { detectPlatform } = require('../../music/PlatformDetector');
 
         const query = interaction.options.getString('musica');
         const voiceChannel = interaction.member.voice.channel;
