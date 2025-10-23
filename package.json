@@ -1,11 +1,14 @@
 {
-  "name": "discord-multifunctional-bot",
-  "version": "1.0.0",
-  "description": "Bot multifuncional para Discord que substitui Lawliet, Mudae, Loritta, ZeroTwo e Jockei Music",
+  "name": "daci-discord-bot",
+  "version": "2.0.0",
+  "description": "🤖 Bot multifuncional para Discord com sistema de personalidades dinâmicas, música multi-plataforma e comandos de moderação e diversão",
   "main": "bot.js",
   "scripts": {
     "start": "node bot.js",
-    "dev": "nodemon bot.js"
+    "dev": "nodemon bot.js",
+    "deploy": "node scripts/deploy-commands.js",
+    "deploy:guild": "node scripts/deploy-guild-commands.js",
+    "setup": "node scripts/setup.js"
   },
   "keywords": [
     "discord",
@@ -13,10 +16,17 @@
     "multifunctional",
     "moderation",
     "music",
-    "gacha"
+    "personality",
+    "discord.js",
+    "voice",
+    "discord-bot"
   ],
-  "author": "Felipe",
+  "author": "Felipe Ferreira",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/seu-usuario/daci-discord-bot"
+  },
   "dependencies": {
     "@discordjs/opus": "^0.10.0",
     "@discordjs/voice": "^0.19.0",

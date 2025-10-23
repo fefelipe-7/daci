@@ -1,47 +1,62 @@
-# 🤖 Bot Multifuncional para Discord
+# 🤖 DACI - Discord Bot Multifuncional
 
-Um bot completo que substitui Lawliet, Mudae, Loritta, ZeroTwo e Jockei Music em uma única solução modular e escalável.
+Um bot completo e modular para Discord com **sistema de personalidades dinâmicas**, **música multi-plataforma** e comandos de **moderação**, **diversão** e **utilidades**.
 
-## ✨ Funcionalidades
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D16.9.0-brightgreen)](https://nodejs.org/)
+[![Discord.js](https://img.shields.io/badge/discord.js-v14-blue)](https://discord.js.org/)
+
+## ✨ Funcionalidades Principais
+
+### 🎭 Sistema de Personalidades
+- **Personalidades Dinâmicas**: Cada usuário pode ter sua própria personalidade customizada
+- **Linguagem Mandrake**: Sistema de transformação de mensagens com gírias e expressões únicas
+- **Apelidos Personalizados**: Sistema de apelidos para mencionar outros usuários
+- **Perfis Predefinidos**: 8+ perfis prontos (Near, Rest, Tim, Vic, Pure, Madu, Peu, PH)
+- **Configuração Flexível**: Defina tons, estilos e vocabulários personalizados
+
+### 🎵 Sistema de Música (Multi-plataforma)
+- **Plataformas Suportadas**: Spotify, YouTube, SoundCloud
+- **Busca Inteligente**: Por nome ou URL direta
+- **Controles Completos**: Play, pause, resume, skip, stop, volume
+- **Fila Avançada**: Loop (música/fila), shuffle, paginação
+- **Sistema de Votação**: Skip por votação quando há múltiplos usuários
+- **Botões Interativos**: Interface com botões do Discord
 
 ### 🛡️ Moderação
-- **Kick/Ban**: Expulsar e banir membros com logs
-- **Limpeza**: Deletar mensagens em massa
-- **Logs**: Sistema completo de logs de moderação
+- **Kick/Ban**: Expulsar e banir membros
+- **Mute/Unmute**: Sistema de silenciamento
+- **Warn**: Sistema de avisos
+- **Clear**: Limpeza de mensagens em massa
+- **Logs**: Sistema completo de registro de ações
 
-### 🎉 Diversão e Entretenimento
-- **Piadas Internas**: Piadas personalizadas do grupo
-- **Memes Internos**: Banco de memes do grupo
-- **GIFs**: Busca de GIFs com termos internos
-- **Jogos**: Quiz sobre o grupo, adivinhar números
-- **Bola 8**: Respostas aleatórias para perguntas
-
-### 🎵 Música (Sistema Completo - Estilo Jockie Music)
-- **Multi-plataforma**: Spotify, YouTube, SoundCloud
-- **Sistema Híbrido**: Spotify extrai metadados + busca YouTube
-- **Fila Avançada**: Loop, shuffle, votação para skip
-- **Controles Completos**: Play, pause, resume, skip, stop, volume
-- **Botões Interativos**: Controles via botões no Discord
-- **Busca Inteligente**: Por nome ou URL
+### 🎉 Diversão
+- **Piadas e Memes**: Banco de piadas e memes internos
+- **GIFs**: Busca de GIFs com termos personalizados
+- **Quiz**: Perguntas sobre o grupo
+- **Adivinhar**: Jogo de adivinhar números
+- **8ball**: Bola 8 mágica para perguntas
 
 ### 🔧 Utilidades
-- **Userinfo**: Informações detalhadas de usuários
-- **Serverinfo**: Informações do servidor
+- **UserInfo/ServerInfo**: Informações detalhadas
+- **Enquetes**: Sistema de votação
+- **Lembretes**: Lembretes pessoais
+- **Stats**: Estatísticas do bot
 - **Help**: Sistema de ajuda categorizado
 
-## 🚀 Instalação
+## 🚀 Instalação Rápida
 
 ### Pré-requisitos
-- Node.js 16.9.0 ou superior
-- npm ou yarn
-- Token do Discord Bot
+- **Node.js** 16.9.0 ou superior
+- **npm** ou **yarn**
+- **Token do Discord Bot** ([Discord Developer Portal](https://discord.com/developers/applications))
 
 ### Passo a Passo
 
 1. **Clone o repositório**
 ```bash
-git clone <url-do-repositorio>
-cd discord-multifunctional-bot
+git clone https://github.com/seu-usuario/daci-discord-bot.git
+cd daci-discord-bot
 ```
 
 2. **Instale as dependências**
@@ -51,31 +66,152 @@ npm install
 
 3. **Configure as variáveis de ambiente**
 ```bash
-# Copie o arquivo de exemplo
-cp env_example.txt .env
+cp .env.example .env
+```
 
-# Edite o arquivo .env com suas informações
+Edite o arquivo `.env` com suas informações:
+```env
 DISCORD_TOKEN=seu_token_aqui
+CLIENT_ID=seu_client_id_aqui
 OWNER_ID=seu_id_aqui
 LOG_CHANNEL_ID=id_do_canal_de_logs
 ```
 
-4. **Configure o bot no Discord**
-- Acesse [Discord Developer Portal](https://discord.com/developers/applications)
-- Crie uma nova aplicação
-- Vá em "Bot" e copie o token
-- Em "OAuth2 > URL Generator", selecione:
-  - Scopes: `bot`, `applications.commands`
-  - Bot Permissions: `Administrator` (ou permissões específicas)
+4. **Execute o setup inicial**
+```bash
+npm run setup
+```
 
-5. **Execute o bot**
+5. **Registre os comandos**
+```bash
+npm run deploy
+```
+
+6. **Inicie o bot**
 ```bash
 npm start
 ```
 
+Para desenvolvimento com auto-reload:
+```bash
+npm run dev
+```
+
+## 📁 Estrutura do Projeto
+
+```
+daci-discord-bot/
+├── bot.js                    # Arquivo principal do bot
+├── config.json              # Configurações do bot
+├── package.json             # Dependências e scripts
+├── .env.example             # Exemplo de variáveis de ambiente
+├── LICENSE                  # Licença MIT
+│
+├── commands/                # Comandos slash organizados
+│   ├── fun/                # Comandos de diversão
+│   ├── moderation/         # Comandos de moderação
+│   ├── music/              # Sistema de música
+│   ├── personality/        # Comandos de personalidade
+│   └── utils/              # Utilidades
+│
+├── core/                    # Núcleo do sistema
+│   ├── DaciPersonality.js  # Sistema de personalidades
+│   ├── LanguageTransformer.js # Transformador de linguagem
+│   ├── MessageTemplates.js # Templates de mensagens
+│   ├── PersonalityEngine.js # Engine de personalidades
+│   ├── ResponseBuilder.js  # Construtor de respostas
+│   └── UserNicknames.js    # Sistema de apelidos
+│
+├── database/                # Sistema de banco de dados
+│   └── database.js         # Configuração SQLite
+│
+├── events/                  # Event handlers do Discord
+│   ├── ready.js            # Evento de inicialização
+│   ├── interactionCreate.js # Comandos slash
+│   └── messageCreate.js    # Mensagens regulares
+│
+├── models/                  # Modelos de dados
+│   └── UserPersonality.js  # Modelo de personalidade
+│
+├── music/                   # Sistema de música modular
+│   ├── MusicPlayer.js      # Player de música
+│   ├── MusicProcessor.js   # Processador de áudio
+│   ├── MusicQueue.js       # Gerenciador de fila
+│   ├── PlatformDetector.js # Detector de plataformas
+│   └── QueueManager.js     # Gerenciador global de filas
+│
+├── profiles/                # Perfis de personalidade predefinidos
+│   ├── near.json
+│   ├── rest.json
+│   ├── tim.json
+│   └── ... (outros perfis)
+│
+├── scripts/                 # Scripts utilitários
+│   ├── deploy-commands.js  # Deploy de comandos globais
+│   ├── deploy-guild-commands.js # Deploy de comandos em servidor
+│   ├── setup.js            # Setup inicial
+│   └── ... (outros scripts)
+│
+├── docs/                    # Documentação completa
+│   ├── INSTALACAO.md       # Guia de instalação detalhado
+│   ├── MUSICA.md           # Documentação do sistema de música
+│   ├── PERSONALIDADES_GUIA.md # Guia de personalidades
+│   ├── GUIA_LINGUAGEM_MANDRAKE.md # Guia da linguagem
+│   └── ... (outras documentações)
+│
+└── docbases/                # Base de conhecimento
+    ├── docbase-1.md        # Contexto do projeto
+    └── docbase-2-linguagem-mandrake.md
+```
+
+## 🎮 Comandos Principais
+
+### 🎭 Personalidades
+- `/perfil [usuário]` - Ver perfil de personalidade
+- `/definir` - Definir sua personalidade customizada
+- `/listar_perfis` - Ver perfis predefinidos disponíveis
+- `/resetar` - Resetar personalidade para padrão
+- `/debug_personalidade [usuário]` - Debug de personalidade
+
+### 🎵 Música
+- `/play <música>` - Tocar música (Spotify/YouTube/SoundCloud)
+- `/pause` - Pausar música
+- `/resume` - Retomar música
+- `/skip` - Pular música (votação automática)
+- `/stop` - Parar e limpar fila
+- `/queue [página]` - Ver fila de músicas
+- `/volume <0-100>` - Ajustar volume
+- `/loop <off/song/queue>` - Configurar loop
+- `/shuffle` - Embaralhar fila
+- `/np` - Ver música atual
+
+### 🛡️ Moderação
+- `/kick @usuário [motivo]` - Expulsar membro
+- `/ban @usuário [motivo]` - Banir membro
+- `/mute @usuário <tempo> [motivo]` - Silenciar membro
+- `/unmute @usuário` - Remover silêncio
+- `/warn @usuário [motivo]` - Avisar membro
+- `/clear <quantidade>` - Limpar mensagens
+
+### 🎉 Diversão
+- `/piada` - Piada aleatória
+- `/meme` - Meme aleatório
+- `/gif <termo>` - Buscar GIF
+- `/quiz` - Quiz sobre o grupo
+- `/adivinhar <número>` - Adivinhar número (1-10)
+- `/8ball <pergunta>` - Bola 8 mágica
+
+### 🔧 Utilidades
+- `/userinfo [@usuário]` - Informações do usuário
+- `/serverinfo` - Informações do servidor
+- `/enquete <pergunta> <opções>` - Criar enquete
+- `/lembrete <tempo> <mensagem>` - Criar lembrete
+- `/stats` - Estatísticas do bot
+- `/help [categoria]` - Ajuda detalhada
+
 ## ⚙️ Configuração
 
-### Arquivo config.json
+### config.json
 ```json
 {
   "bot": {
@@ -86,136 +222,108 @@ npm start
   },
   "modules": {
     "moderation": { "enabled": true },
-    "gacha": { "enabled": true },
     "fun": { "enabled": true },
-    "music": { "enabled": true },
+    "music": { "enabled": true, "defaultVolume": 0.5 },
     "utils": { "enabled": true }
   }
 }
 ```
 
 ### Permissões Necessárias
-- **Moderação**: `Kick Members`, `Ban Members`, `Manage Messages`
-- **Música**: `Connect`, `Speak`, `Use Voice Activity`
-- **Geral**: `Send Messages`, `Use Slash Commands`, `Embed Links`
+O bot precisa das seguintes permissões no Discord:
+- `Send Messages` - Enviar mensagens
+- `Use Slash Commands` - Usar comandos slash
+- `Embed Links` - Enviar embeds
+- `Manage Messages` - Gerenciar mensagens (moderação)
+- `Kick Members` - Expulsar membros
+- `Ban Members` - Banir membros
+- `Connect` - Conectar a canais de voz
+- `Speak` - Falar em canais de voz
+- `Use Voice Activity` - Usar atividade de voz
 
-## 📁 Estrutura do Projeto
+## 📖 Documentação Completa
 
-```
-discord-multifunctional-bot/
-├── bot.js                 # Arquivo principal
-├── config.json           # Configurações
-├── package.json          # Dependências
-├── commands/             # Comandos slash
-│   ├── moderation/       # Comandos de moderação
-│   ├── gacha/           # Sistema de gacha
-│   ├── fun/             # Comandos de diversão
-│   ├── music/           # Sistema de música
-│   └── utils/           # Utilidades
-├── events/              # Eventos do Discord
-├── database/             # Sistema de banco de dados
-└── README.md            # Este arquivo
-```
-
-## 🎮 Comandos Principais
-
-### Moderação
-- `/kick @usuário [motivo]` - Expulsa um membro
-- `/ban @usuário [motivo] [dias]` - Bane um membro
-- `/clear <quantidade> [@usuário]` - Limpa mensagens
-
-### Diversão
-- `/piada` - Piada interna do grupo
-- `/meme` - Meme interno do grupo
-- `/gif <palavra>` - Busca GIF com palavra-chave
-- `/adivinhar <número>` - Jogo de adivinhar (1-10)
-- `/quiz` - Pergunta sobre o grupo
-- `/8ball <pergunta>` - Bola 8 mágica
-
-### Música (Sistema Completo)
-- `/play <URL/nome>` - Toca de Spotify, YouTube, SoundCloud ou busca
-- `/pause` - Pausa música
-- `/resume` - Retoma música pausada
-- `/skip` - Pula música (votação se >2 pessoas)
-- `/stop` - Para toda reprodução e limpa fila
-- `/queue [página]` - Mostra fila com paginação
-- `/volume <0-100>` - Ajusta volume
-- `/loop <off/song/queue>` - Loop música ou fila
-- `/shuffle` - Embaralha fila
-- `/np` - Mostra música atual com detalhes
-
-**📖 Guia completo:** Veja [MUSICA.md](MUSICA.md) para mais detalhes
-
-### Utilidades
-- `/userinfo [@usuário]` - Informações do usuário
-- `/serverinfo` - Informações do servidor
-- `/lembrete <tempo> <mensagem>` - Cria lembrete pessoal
-- `/enquete <pergunta> <opções>` - Cria enquete no canal
-- `/stats` - Estatísticas do bot
-- `/help [categoria]` - Ajuda categorizada
+Para guias detalhados, consulte a pasta [`docs/`](docs/):
+- **[Instalação Detalhada](docs/INSTALACAO.md)** - Guia completo de instalação
+- **[Sistema de Música](docs/MUSICA.md)** - Documentação do sistema de música
+- **[Personalidades](docs/PERSONALIDADES_GUIA.md)** - Como usar personalidades
+- **[Linguagem Mandrake](docs/GUIA_LINGUAGEM_MANDRAKE.md)** - Guia da linguagem
+- **[Deploy no Render](docs/DEPLOY_RENDER.md)** - Deploy em produção
 
 ## 🔧 Desenvolvimento
 
 ### Adicionando Novos Comandos
-1. Crie um arquivo na pasta `commands/categoria/`
-2. Use a estrutura:
+
+1. Crie um arquivo em `commands/categoria/`:
 ```javascript
 const { SlashCommandBuilder } = require('discord.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('nome')
-        .setDescription('Descrição'),
+        .setName('comando')
+        .setDescription('Descrição do comando'),
     
     async execute(interaction) {
-        // Lógica do comando
+        await interaction.reply('Resposta!');
     }
 };
 ```
 
-### Adicionando Novos Eventos
-1. Crie um arquivo na pasta `events/`
-2. Use a estrutura:
-```javascript
-module.exports = {
-    name: 'nomeDoEvento',
-    async execute(...args) {
-        // Lógica do evento
-    }
-};
+2. Execute `npm run deploy` para registrar o comando
+
+### Scripts Disponíveis
+```bash
+npm start              # Iniciar bot em produção
+npm run dev            # Iniciar com auto-reload
+npm run deploy         # Deploy de comandos globais
+npm run deploy:guild   # Deploy de comandos em servidor específico
+npm run setup          # Setup inicial do banco de dados
 ```
 
 ## 🐛 Solução de Problemas
 
-### Bot não responde
-- Verifique se o token está correto
-- Confirme se as permissões estão configuradas
-- Verifique se o bot está online
+### Bot não conecta
+- Verifique se o token está correto no `.env`
+- Confirme que as intents estão habilitadas no Developer Portal
 
 ### Comandos não aparecem
-- Execute `/help` para verificar se os comandos foram registrados
-- Reinicie o bot se necessário
+- Execute `npm run deploy` para registrar os comandos
+- Aguarde até 1 hora para propagação global
+- Use `npm run deploy:guild` para testes imediatos
 
-### Erro de permissões
-- Verifique se o bot tem as permissões necessárias
-- Confirme se o canal de logs existe
+### Música não toca
+- Verifique se o bot tem permissões de voz
+- Confirme que o FFmpeg está instalado
+- Verifique a conexão de internet
+
+Para mais ajuda, consulte a [documentação completa](docs/) ou abra uma issue.
+
+## 🤝 Contribuindo
+
+Contribuições são bem-vindas! Por favor:
+
+1. Fork o projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/NovaFeature`)
+3. Commit suas mudanças (`git commit -m 'Adiciona nova feature'`)
+4. Push para a branch (`git push origin feature/NovaFeature`)
+5. Abra um Pull Request
 
 ## 📝 Licença
 
-MIT License - veja o arquivo LICENSE para detalhes.
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
 
-## 🤝 Contribuição
+## 👤 Autor
 
-1. Fork o projeto
-2. Crie uma branch para sua feature
-3. Commit suas mudanças
-4. Push para a branch
-5. Abra um Pull Request
+**Felipe Ferreira**
 
-## 📞 Suporte
+## 🙏 Agradecimentos
 
-Para suporte, abra uma issue no repositório ou entre em contato.
+- Comunidade Discord.js
+- Todos os contribuidores do projeto
+- Usuários e testadores do bot
 
 ---
 
-**Desenvolvido com ❤️ para substituir múltiplos bots em um só!**
+**Desenvolvido com ❤️ para criar a melhor experiência em servidores Discord!**
+
+Para suporte, dúvidas ou sugestões, abra uma [issue](https://github.com/seu-usuario/daci-discord-bot/issues) no GitHub.

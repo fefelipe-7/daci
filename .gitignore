@@ -66,3 +66,16 @@ docs/api/
 # Arquivos específicos do projeto
 config.env
 bot.db
+*.db
+*.sqlite
+*.sqlite3
+
+# Arquivos de backup
+*_backup.js
+*_BACKUP.js
+*_backup_*.js
+*.bak
+
+# Arquivos temporários do projeto
+*-player-script.js
+temp_*.js
