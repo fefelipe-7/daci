@@ -3,7 +3,7 @@
  * Gerencia comunicação com API, fallback de modelos e contexto personalizado
  */
 
-const fetch = require('node-fetch');
+// Usar fetch nativo do Node.js 22+ (global)
 const ModelManager = require('./ModelManager.js');
 const PromptBuilder = require('./PromptBuilder.js');
 const logger = require('./Logger.js');
