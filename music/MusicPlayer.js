@@ -1,8 +1,6 @@
 const { createAudioPlayer, createAudioResource, AudioPlayerStatus, VoiceConnectionStatus, joinVoiceChannel } = require('@discordjs/voice');
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-
-// Lazy load play-dl
-let play;
+const ytdl = require('ytdl-core');
 
 class MusicPlayer {
     async createConnection(voiceChannel, guildId) {
@@ -44,15 +42,16 @@ class MusicPlayer {
                 queue.connection.subscribe(queue.player);
             }
 
-            // Lazy load play-dl
-            if (!play) play = require('play-dl');
-
-            // Criar stream de áudio
+            // Criar stream de áudio usando ytdl-core (RÁPIDO!)
             console.log('🎵 Tocando:', song.title);
-            const stream = await play.stream(song.url);
             
-            const resource = createAudioResource(stream.stream, {
-                inputType: stream.type,
+            const stream = ytdl(song.url, {
+                filter: 'audioonly',
+                quality: 'highestaudio',
+                highWaterMark: 1 << 25 // Buffer maior para melhor performance
+            });
+            
+            const resource = createAudioResource(stream, {
                 inlineVolume: true
             });
 

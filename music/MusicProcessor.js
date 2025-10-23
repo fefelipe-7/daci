@@ -1,5 +1,5 @@
-// Lazy load - só carrega quando realmente usar
-let play, getData, YouTube;
+// Lazy load - bibliotecas mais leves e rápidas
+let ytdl, ytsr, fetch;
 
 class MusicProcessor {
     constructor() {
@@ -29,35 +29,42 @@ class MusicProcessor {
     async processSpotify(url) {
         try {
             // Lazy load
-            if (!getData) getData = require('spotify-url-info').getData;
-            if (!YouTube) YouTube = require('youtube-sr').default;
-
+            if (!fetch) fetch = (await import('node-fetch')).default;
+            
             // Verificar cache
             if (this.cache.has(url)) {
                 console.log('💾 Usando cache para:', url);
                 return this.cache.get(url);
             }
 
-            // 1. Extrair metadados do Spotify
-            console.log('🎵 Extraindo info do Spotify...');
-            const spotifyData = await getData(url);
-            
-            // 2. Buscar no YouTube
-            const searchQuery = `${spotifyData.name} ${spotifyData.artists ? spotifyData.artists.map(a => a.name).join(' ') : ''}`;
-            console.log('🔍 Buscando no YouTube:', searchQuery);
-            
-            const ytResults = await YouTube.searchOne(searchQuery);
-            
-            if (!ytResults) {
-                throw new Error('Música não encontrada no YouTube');
+            // Extrair ID do Spotify
+            const trackId = url.match(/track\/([a-zA-Z0-9]+)/)?.[1];
+            if (!trackId) {
+                throw new Error('URL do Spotify inválida');
             }
 
+            console.log('🎵 Extraindo info do Spotify...');
+            
+            // Usar API pública do Spotify (sem autenticação)
+            const response = await fetch(`https://open.spotify.com/oembed?url=${url}`);
+            const data = await response.json();
+            
+            // Extrair nome e artista do título
+            const title = data.title; // Ex: "Song Name · Artist Name"
+            const [songName, artistName] = title.split(' · ');
+
+            // Buscar no YouTube
+            const searchQuery = `${songName} ${artistName || ''}`.trim();
+            console.log('🔍 Buscando no YouTube:', searchQuery);
+            
+            const ytResult = await this.searchYouTube(searchQuery);
+            
             const songInfo = {
-                title: spotifyData.name,
-                artist: spotifyData.artists ? spotifyData.artists.map(a => a.name).join(', ') : 'Desconhecido',
-                url: ytResults.url,
-                thumbnail: spotifyData.coverArt?.sources?.[0]?.url || ytResults.thumbnail?.url || '',
-                duration: spotifyData.duration || ytResults.duration,
+                title: songName,
+                artist: artistName || 'Desconhecido',
+                url: ytResult.url,
+                thumbnail: data.thumbnail_url || ytResult.thumbnail,
+                duration: ytResult.duration,
                 platform: 'spotify',
                 originalUrl: url
             };
@@ -68,24 +75,33 @@ class MusicProcessor {
             return songInfo;
         } catch (error) {
             console.error('Erro ao processar Spotify:', error);
-            throw new Error('Não foi possível processar a música do Spotify');
+            // Fallback: buscar o link diretamente
+            return await this.searchYouTube(url);
         }
     }
 
     async processYouTube(url) {
         try {
-            // Lazy load
-            if (!play) play = require('play-dl');
+            // Lazy load ytdl-core
+            if (!ytdl) ytdl = require('ytdl-core');
 
             console.log('🎵 Processando YouTube...');
-            const info = await play.video_info(url);
+            
+            // Validar URL
+            if (!ytdl.validateURL(url)) {
+                throw new Error('URL inválida do YouTube');
+            }
+
+            // Obter informações básicas (rápido)
+            const info = await ytdl.getBasicInfo(url);
+            const details = info.videoDetails;
             
             return {
-                title: info.video_details.title,
-                artist: info.video_details.channel?.name || 'YouTube',
-                url: info.video_details.url,
-                thumbnail: info.video_details.thumbnails?.[0]?.url || '',
-                duration: info.video_details.durationInSec,
+                title: details.title,
+                artist: details.author?.name || details.ownerChannelName || 'YouTube',
+                url: details.video_url,
+                thumbnail: details.thumbnails?.[0]?.url || '',
+                duration: parseInt(details.lengthSeconds) || 0,
                 platform: 'youtube',
                 originalUrl: url
             };
@@ -97,21 +113,9 @@ class MusicProcessor {
 
     async processSoundCloud(url) {
         try {
-            // Lazy load
-            if (!play) play = require('play-dl');
-
-            console.log('🎵 Processando SoundCloud...');
-            const info = await play.soundcloud(url);
-            
-            return {
-                title: info.name,
-                artist: info.user?.name || 'SoundCloud',
-                url: info.url,
-                thumbnail: info.thumbnail || '',
-                duration: info.durationInSec,
-                platform: 'soundcloud',
-                originalUrl: url
-            };
+            // SoundCloud é complicado, vamos buscar no YouTube mesmo
+            console.log('🎵 Convertendo SoundCloud para YouTube...');
+            return await this.searchYouTube(url);
         } catch (error) {
             console.error('Erro ao processar SoundCloud:', error);
             throw new Error('Não foi possível processar a música do SoundCloud');
@@ -121,10 +125,12 @@ class MusicProcessor {
     async searchYouTube(query) {
         try {
             // Lazy load
-            if (!YouTube) YouTube = require('youtube-sr').default;
+            if (!ytsr) ytsr = require('youtube-sr').default;
 
             console.log('🔍 Buscando no YouTube:', query);
-            const results = await YouTube.searchOne(query);
+            
+            // Busca rápida
+            const results = await ytsr.searchOne(query, 'video');
             
             if (!results) {
                 throw new Error('Nenhum resultado encontrado');
@@ -132,15 +138,14 @@ class MusicProcessor {
 
             console.log('📝 Resultado YouTube:', {
                 title: results.title,
-                url: results.url,
                 id: results.id
             });
 
-            // YouTube.searchOne retorna objeto diferente, precisamos construir URL
-            const videoUrl = results.url || `https://www.youtube.com/watch?v=${results.id}`;
+            // Construir URL
+            const videoUrl = `https://www.youtube.com/watch?v=${results.id}`;
 
             return {
-                title: results.title,
+                title: results.title || 'Sem título',
                 artist: results.channel?.name || 'YouTube',
                 url: videoUrl,
                 thumbnail: results.thumbnail?.url || results.thumbnail?.displayThumbnailURL?.() || '',
