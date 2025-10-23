@@ -43,31 +43,22 @@ class AIService {
         const startTime = Date.now();
         this.stats.totalRequests++;
 
-        try {
-            // Selecionar melhor modelo disponível
-            let model = this.modelManager.selectBestModel();
-            logger.info('model', `Selecionado: ${model.name.split('/')[1]} (prioridade ${model.priority})`);
+        // Selecionar melhor modelo disponível
+        let model = this.modelManager.selectBestModel();
+        logger.info('model', `Selecionado: ${model.name.split('/')[1]} (prioridade ${model.priority})`);
 
-            // Construir prompt contextualizado
-            const prompt = this.promptBuilder.buildPrompt(userProfile, message, context);
-            
-            // Tentar gerar resposta (com fallback automático)
-            const response = await this.generateWithFallback(prompt, model);
+        // Construir prompt contextualizado
+        const prompt = this.promptBuilder.buildPrompt(userProfile, message, context);
+        
+        // Tentar gerar resposta (com fallback automático)
+        const response = await this.generateWithFallback(prompt, model);
 
-            // Registrar sucesso
-            const responseTime = Date.now() - startTime;
-            this.recordSuccess(responseTime);
+        // Registrar sucesso
+        const responseTime = Date.now() - startTime;
+        this.recordSuccess(responseTime);
 
-            logger.success('ai', `Resposta gerada em ${responseTime}ms`);
-            return response;
-
-        } catch (error) {
-            this.stats.failedRequests++;
-            logger.error('ai', 'Falha total ao gerar resposta', error);
-            
-            // Retornar resposta de fallback
-            return this.getFallbackResponse(message, userProfile);
-        }
+        logger.success('ai', `Resposta gerada em ${responseTime}ms`);
+        return response;
     }
 
     /**
