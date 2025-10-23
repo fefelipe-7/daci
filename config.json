@@ -1,0 +1,40 @@
+{
+  "bot": {
+    "prefix": "!",
+    "token": "SEU_TOKEN_AQUI",
+    "ownerId": "SEU_ID_AQUI",
+    "logChannelId": "ID_DO_CANAL_DE_LOGS"
+  },
+  "modules": {
+    "moderation": {
+      "enabled": true,
+      "logActions": true,
+      "autoModeration": false
+    },
+    "gacha": {
+      "enabled": true,
+      "maxInventorySize": 100,
+      "dailyRolls": 5,
+      "premiumRolls": 10
+    },
+    "fun": {
+      "enabled": true,
+      "autoReactions": true,
+      "memeChannels": []
+    },
+    "music": {
+      "enabled": true,
+      "defaultVolume": 0.5,
+      "maxQueueSize": 50
+    },
+    "utils": {
+      "enabled": true,
+      "reminderMaxDuration": 86400
+    }
+  },
+  "permissions": {
+    "moderationRoles": ["Admin", "Moderador"],
+    "musicRoles": ["DJ", "Admin"],
+    "gachaRoles": ["@everyone"]
+  }
+}

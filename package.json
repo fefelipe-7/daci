@@ -1,0 +1,38 @@
+{
+  "name": "discord-multifunctional-bot",
+  "version": "1.0.0",
+  "description": "Bot multifuncional para Discord que substitui Lawliet, Mudae, Loritta, ZeroTwo e Jockei Music",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js",
+    "dev": "nodemon bot.js"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "multifunctional",
+    "moderation",
+    "music",
+    "gacha"
+  ],
+  "author": "Felipe",
+  "license": "MIT",
+  "dependencies": {
+    "@discordjs/voice": "^0.16.1",
+    "better-sqlite3": "^9.2.2",
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.3.1",
+    "ffmpeg-static": "^5.2.0",
+    "libsodium-wrappers": "^0.7.11",
+    "node-fetch": "^3.3.2",
+    "play-dl": "^1.9.7",
+    "spotify-url-info": "^3.2.18",
+    "tweetnacl": "^1.0.3",
+    "youtube-dl-exec": "^2.4.5",
+    "youtube-sr": "^4.3.12",
+    "ytdl-core": "^4.11.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}
