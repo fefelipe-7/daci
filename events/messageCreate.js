@@ -2,6 +2,7 @@ const UserPersonality = require('../models/UserPersonality');
 const PersonalityEngine = require('../core/PersonalityEngine');
 const ResponseBuilder = require('../core/ResponseBuilder');
 const UserNicknames = require('../core/UserNicknames');
+const logger = require('../core/Logger');
 const fs = require('fs');
 const path = require('path');
 
@@ -37,7 +38,7 @@ module.exports = {
                 const repliedMessage = await message.channel.messages.fetch(message.reference.messageId);
                 isReplyingToBot = repliedMessage.author.id === message.client.user.id;
             } catch (error) {
-                console.error('[IA] Erro ao verificar mensagem referenciada:', error);
+                logger.error('message', 'Erro ao verificar mensagem referenciada', error);
             }
         }
 
@@ -45,12 +46,26 @@ module.exports = {
         if (!isMention && !isReplyingToBot) return;
 
         try {
+            // Log da mensagem recebida
+            logger.messageReceived(
+                message.author.id,
+                message.author.username,
+                message.content,
+                isMention,
+                isReplyingToBot
+            );
+
             // 1. Carregar perfil do usuário (criar se não existe)
             let perfil = UserPersonality.get(message.author.id, message.guild.id);
             
             // DEBUG: Verificar reconhecimento de apelido
             const apelidoDetectado = UserNicknames.getNickname(message.author.id);
-            console.log(`[IA] User ID: ${message.author.id} | Username: ${message.author.username} | Apelido: ${apelidoDetectado}`);
+            logger.personalityLoaded(
+                message.author.id,
+                message.author.username,
+                apelidoDetectado,
+                perfil.parametros?.afinidade || 0.5
+            );
             
             // Atualizar username se necessário
             if (perfil.username === 'Unknown') {
@@ -71,9 +86,10 @@ module.exports = {
             let resposta;
 
             // 4. TENTAR GERAR RESPOSTA COM IA (se disponível)
+            const startTime = Date.now();
             if (global.aiService) {
                 try {
-                    console.log(`[IA] Gerando resposta com IA para ${apelidoDetectado}...`);
+                    logger.aiRequest(apelidoDetectado, mensagemLimpa, 'auto-select');
                     
                     // Contexto adicional da conversa
                     const context = {
@@ -91,10 +107,14 @@ module.exports = {
                         context
                     );
 
-                    console.log(`[IA] ✅ Resposta gerada com IA`);
+                    const responseTime = Date.now() - startTime;
+                    logger.aiResponse(apelidoDetectado, responseTime, true);
+                    logger.performance('Geração IA', responseTime);
 
                 } catch (error) {
-                    console.warn(`[IA] ⚠️ Falha na IA, usando fallback: ${error.message}`);
+                    const responseTime = Date.now() - startTime;
+                    logger.warn('ai', `Falha na IA para ${apelidoDetectado}, usando fallback: ${error.message}`);
+                    logger.aiResponse(apelidoDetectado, responseTime, false);
                     
                     // FALLBACK: usar templates se IA falhar
                     resposta = ResponseBuilder.gerarRespostaTemplate(
@@ -107,7 +127,7 @@ module.exports = {
                 }
             } else {
                 // IA não disponível - usar templates
-                console.log(`[IA] ℹ️ IA desabilitada, usando templates`);
+                logger.info('ai', 'IA desabilitada, usando templates');
                 resposta = ResponseBuilder.gerarRespostaTemplate(
                     mensagemLimpa,
                     parametrosFinais,
@@ -133,17 +153,18 @@ module.exports = {
             // 7. Enviar resposta
             await message.reply(resposta);
 
-            // Log para console (usa apelido detectado)
-            console.log(`[IA] Respondeu para ${apelidoDetectado} | Tipo: ${tipoRelacao} | Tom: ${estiloResposta.tom}`);
+            // Log da resposta enviada
+            logger.personalityResponse(apelidoDetectado, tipoRelacao, estiloResposta.tom);
+            logger.success('message', `Respondeu: "${resposta.substring(0, 50)}${resposta.length > 50 ? '...' : ''}"`);
 
         } catch (error) {
-            console.error('[IA] Erro ao processar mensagem:', error);
+            logger.error('message', 'Erro ao processar mensagem', error);
             
             // Resposta de fallback em caso de erro
             try {
                 await message.reply('Hmm... algo deu errado aqui 🤔');
             } catch (replyError) {
-                console.error('[IA] Erro ao enviar resposta de fallback:', replyError);
+                logger.error('message', 'Erro ao enviar resposta de fallback', replyError);
             }
         }
     }

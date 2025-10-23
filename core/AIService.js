@@ -6,6 +6,7 @@
 const fetch = require('node-fetch');
 const ModelManager = require('./ModelManager.js');
 const PromptBuilder = require('./PromptBuilder.js');
+const logger = require('./Logger.js');
 
 class AIService {
     constructor(apiKey) {
@@ -30,8 +31,8 @@ class AIService {
             totalResponseTime: 0
         };
 
-        console.log('✅ AIService inicializado com OpenRouter');
-        console.log(`🔑 API Key: ${apiKey.substring(0, 10)}...`);
+        logger.startup('AIService', 'success', 'Conectado ao OpenRouter');
+        logger.debug('ai', `API Key: ${apiKey.substring(0, 10)}...`);
     }
 
     /**
@@ -44,7 +45,7 @@ class AIService {
         try {
             // Selecionar melhor modelo disponível
             let model = this.modelManager.selectBestModel();
-            console.log(`🤖 Usando modelo: ${model.name} (prioridade ${model.priority})`);
+            logger.info('model', `Selecionado: ${model.name.split('/')[1]} (prioridade ${model.priority})`);
 
             // Construir prompt contextualizado
             const prompt = this.promptBuilder.buildPrompt(userProfile, message, context);
@@ -56,12 +57,12 @@ class AIService {
             const responseTime = Date.now() - startTime;
             this.recordSuccess(responseTime);
 
-            console.log(`✅ Resposta gerada em ${responseTime}ms`);
+            logger.success('ai', `Resposta gerada em ${responseTime}ms`);
             return response;
 
         } catch (error) {
             this.stats.failedRequests++;
-            console.error('❌ Erro ao gerar resposta:', error.message);
+            logger.error('ai', 'Falha total ao gerar resposta', error);
             
             // Retornar resposta de fallback
             return this.getFallbackResponse(message, userProfile);
@@ -87,15 +88,16 @@ class AIService {
                 return response;
 
             } catch (error) {
-                console.warn(`⚠️ Tentativa ${attempts} falhou com ${currentModel.name}: ${error.message}`);
+                logger.warn('model', `Tentativa ${attempts} falhou com ${currentModel.name.split('/')[1]}: ${error.message}`);
                 
                 // Registrar falha
                 this.modelManager.recordModelUsage(currentModel.name, false);
 
                 // Se não for última tentativa, tentar próximo modelo
                 if (attempts < maxAttempts) {
-                    currentModel = this.modelManager.getNextModel(currentModel.name);
-                    console.log(`🔄 Tentando modelo: ${currentModel.name}`);
+                    const nextModel = this.modelManager.getNextModel(currentModel.name);
+                    logger.aiModelSwitch(currentModel.name.split('/')[1], nextModel.name.split('/')[1]);
+                    currentModel = nextModel;
                 } else {
                     throw error;
                 }

@@ -3,6 +3,8 @@
  * Gerencia múltiplos modelos gratuitos do OpenRouter com prioridades e limites diários
  */
 
+const logger = require('./Logger.js');
+
 class ModelManager {
     constructor() {
         // Lista de modelos disponíveis com suas configurações
@@ -237,9 +239,8 @@ class ModelManager {
         // Ordenar modelos por prioridade
         this.models.sort((a, b) => a.priority - b.priority);
         
-        console.log(`✅ ModelManager inicializado com ${this.models.length} modelos`);
-        console.log(`📊 Modelos confirmados: ${this.models.filter(m => m.category === 'confirmed').length}`);
-        console.log(`🧪 Modelos em teste: ${this.models.filter(m => m.category === 'testing').length}`);
+        logger.startup('ModelManager', 'success', `${this.models.length} modelos carregados`);
+        logger.info('model', `Confirmados: ${this.models.filter(m => m.category === 'confirmed').length} | Em teste: ${this.models.filter(m => m.category === 'testing').length}`);
     }
 
     /**
@@ -254,7 +255,7 @@ class ModelManager {
                 model.requestsUsed = 0;
                 model.lastReset = now;
                 model.isActive = true;
-                console.log(`🔄 Reset diário: ${model.name}`);
+                logger.info('model', `Reset diário: ${model.name.split('/')[1]}`);
             }
         });
     }
@@ -278,7 +279,7 @@ class ModelManager {
         const bestModel = this.models[0];
         bestModel.isActive = true;
         bestModel.requestsUsed = 0;
-        console.warn('⚠️ Todos os modelos atingiram limite. Resetando modelo prioritário.');
+        logger.warn('model', 'Todos os modelos atingiram limite. Resetando modelo prioritário.');
         return bestModel;
     }
 
@@ -293,12 +294,14 @@ class ModelManager {
             // Desativar se atingiu limite
             if (model.requestsUsed >= model.dailyLimit) {
                 model.isActive = false;
-                console.warn(`⚠️ Modelo ${modelName} atingiu limite diário (${model.dailyLimit})`);
+                logger.aiModelLimit(modelName.split('/')[1], model.requestsUsed, model.dailyLimit);
             }
 
-            // Log de progresso
-            const percentUsed = ((model.requestsUsed / model.dailyLimit) * 100).toFixed(1);
-            console.log(`📊 ${modelName}: ${model.requestsUsed}/${model.dailyLimit} (${percentUsed}%)`);
+            // Log de progresso apenas se chegar perto do limite
+            const percentUsed = ((model.requestsUsed / model.dailyLimit) * 100);
+            if (percentUsed >= 80) {
+                logger.debug('model', `${modelName.split('/')[1]}: ${model.requestsUsed}/${model.dailyLimit} (${percentUsed.toFixed(1)}%)`);
+            }
         }
     }
 
@@ -312,7 +315,7 @@ class ModelManager {
         for (let i = currentIndex + 1; i < this.models.length; i++) {
             const model = this.models[i];
             if (model.isActive && model.requestsUsed < model.dailyLimit) {
-                console.log(`🔄 Fallback: ${currentModelName} → ${model.name}`);
+                logger.info('model', `Fallback: ${currentModelName.split('/')[1]} → ${model.name.split('/')[1]}`);
                 return model;
             }
         }

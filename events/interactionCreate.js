@@ -1,21 +1,37 @@
+const logger = require('../core/Logger');
+
 module.exports = {
     name: 'interactionCreate',
     async execute(interaction) {
         // Handler para comandos slash
         if (interaction.isChatInputCommand()) {
+            // Log da execução do comando
+            logger.commandExecuted(
+                interaction.commandName,
+                interaction.user.username,
+                interaction.user.id
+            );
+
             // Log único para debug de latência
             const idade = Date.now() - interaction.createdTimestamp;
             if (idade > 1000) {
-                console.log(`⚠️ Interação /${interaction.commandName} chegou com ${idade}ms de idade`);
+                logger.warn('command', `/${interaction.commandName} chegou com ${idade}ms de latência`);
             }
             
             const command = interaction.client.commands.get(interaction.commandName);
-            if (!command) return;
+            if (!command) {
+                logger.warn('command', `Comando /${interaction.commandName} não encontrado`);
+                return;
+            }
 
             try {
+                const startTime = Date.now();
                 await command.execute(interaction);
+                const execTime = Date.now() - startTime;
+                logger.performance(`Comando /${interaction.commandName}`, execTime);
+                logger.success('command', `/${interaction.commandName} executado com sucesso em ${execTime}ms`);
             } catch (error) {
-                console.error(`Erro ao executar comando ${interaction.commandName}:`, error);
+                logger.error('command', `Erro ao executar /${interaction.commandName}`, error);
                 
                 const errorMessage = {
                     content: '❌ Houve um erro ao executar este comando!',
@@ -29,7 +45,7 @@ module.exports = {
                         await interaction.reply(errorMessage);
                     }
                 } catch (err) {
-                    console.error('Erro ao responder interação:', err);
+                    logger.error('command', 'Erro ao responder interação com erro', err);
                 }
             }
             return;
@@ -113,13 +129,17 @@ module.exports = {
                         break;
 
                     default:
+                        logger.warn('music', `Botão desconhecido: ${interaction.customId}`);
                         await interaction.reply({
                             content: '❌ Botão desconhecido!',
                             flags: 64 // MessageFlags.Ephemeral
                         });
                 }
+                
+                // Log de ação musical
+                logger.info('music', `Botão ${interaction.customId} por ${interaction.user.username}`);
             } catch (error) {
-                console.error('Erro ao processar botão:', error);
+                logger.error('music', 'Erro ao processar botão musical', error);
             }
         }
     }

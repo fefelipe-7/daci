@@ -42,8 +42,14 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
+// Logger centralizado
+const logger = require('./core/Logger.js');
+
 // Carregar configuração
 const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
+
+logger.separator('🚀 DACI BOT INICIANDO');
+logger.info('startup', 'Carregando configurações...');
 
 // Configurar intents do Discord
 const intents = [
@@ -67,27 +73,28 @@ client.commands = new Collection();
 global.aiService = null;
 if (process.env.OPENROUTE_KEY) {
     try {
+        logger.info('startup', 'Inicializando AI Service...');
         const AIService = require('./core/AIService.js');
         global.aiService = new AIService(process.env.OPENROUTE_KEY);
-        console.log('✅ AI Service inicializado com sucesso');
+        logger.startup('AI Service', 'success');
         
         // Testar conexão em background
         global.aiService.testConnection().then(result => {
             if (result.success) {
-                console.log(`🎉 AI Service pronto! Modelo teste: ${result.model.split('/')[1]}`);
+                logger.startup('AI Service', 'success', `Modelo teste: ${result.model.split('/')[1]}`);
             } else {
-                console.warn('⚠️ AI Service com problemas:', result.error);
+                logger.warn('startup', `AI Service com problemas: ${result.error}`);
             }
         }).catch(err => {
-            console.warn('⚠️ Teste de IA falhou:', err.message);
+            logger.warn('startup', `Teste de IA falhou: ${err.message}`);
         });
     } catch (error) {
-        console.error('❌ Erro ao inicializar AI Service:', error.message);
-        console.log('💡 O bot vai funcionar normalmente sem IA');
+        logger.error('startup', 'Erro ao inicializar AI Service', error);
+        logger.info('startup', 'Bot vai funcionar normalmente sem IA');
     }
 } else {
-    console.log('ℹ️ OPENROUTE_KEY não configurada - AI Service desabilitado');
-    console.log('💡 Configure OPENROUTE_KEY no .env para ativar respostas com IA');
+    logger.info('startup', 'OPENROUTE_KEY não configurada - AI Service desabilitado');
+    logger.info('startup', 'Configure OPENROUTE_KEY no .env para ativar respostas com IA');
 }
 
 // Carregar comandos
@@ -115,9 +122,9 @@ function loadCommands() {
             
             if ('data' in command && 'execute' in command) {
                 client.commands.set(command.data.name, command);
-                console.log(`✅ Comando ${command.data.name} carregado!`);
+                logger.debug('startup', `Comando /${command.data.name} carregado`);
             } else {
-                console.log(`❌ Comando em ${filePath} não tem propriedades 'data' ou 'execute'`);
+                logger.warn('startup', `Comando em ${filePath} inválido`);
             }
         }
     }
