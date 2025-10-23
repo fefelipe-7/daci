@@ -109,13 +109,16 @@ class Postprocessor {
     applyFinalTransformations(content, package) {
         let result = content;
         
-        // 1. Adicionar emojis contextuais (moderadamente)
+        // 1. SEMPRE converter para minúsculo (estilo Daci)
+        result = result.toLowerCase();
+        
+        // 2. Adicionar emojis contextuais (moderadamente)
         result = this.addContextualEmojis(result, package);
         
-        // 2. Garantir que não está muito longo
+        // 3. Garantir que não está muito longo
         result = this.limitLength(result, 500);
         
-        // 3. Limpar espaços extras
+        // 4. Limpar espaços extras
         result = result.replace(/\s{2,}/g, ' ').trim();
         
         return result;
