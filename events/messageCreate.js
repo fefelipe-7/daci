@@ -27,8 +27,22 @@ module.exports = {
         // Ignorar mensagens de bots
         if (message.author.bot) return;
 
-        // Ignorar mensagens que não mencionam o bot
-        if (!message.mentions.has(message.client.user)) return;
+        // Verificar se é menção ao bot OU resposta a uma mensagem do bot
+        const isMention = message.mentions.has(message.client.user);
+        const isReplyToBot = message.reference && message.reference.messageId;
+        
+        let isReplyingToBot = false;
+        if (isReplyToBot) {
+            try {
+                const repliedMessage = await message.channel.messages.fetch(message.reference.messageId);
+                isReplyingToBot = repliedMessage.author.id === message.client.user.id;
+            } catch (error) {
+                console.error('[IA] Erro ao verificar mensagem referenciada:', error);
+            }
+        }
+
+        // Ignorar se não for menção nem resposta ao bot
+        if (!isMention && !isReplyingToBot) return;
 
         try {
             // 1. Carregar perfil do usuário (criar se não existe)
@@ -36,7 +50,7 @@ module.exports = {
             
             // DEBUG: Verificar reconhecimento de apelido
             const apelidoDetectado = UserNicknames.getNickname(message.author.id);
-            console.log(`[NICKNAME DEBUG] User ID: ${message.author.id} | Username: ${message.author.username} | Apelido Detectado: ${apelidoDetectado}`);
+            console.log(`[IA] User ID: ${message.author.id} | Username: ${message.author.username} | Apelido: ${apelidoDetectado}`);
             
             // Atualizar username se necessário
             if (perfil.username === 'Unknown') {
@@ -54,14 +68,54 @@ module.exports = {
                 .replace(/<@!?\d+>/g, '')
                 .trim();
 
-            // 4. Gerar resposta usando templates (passa userId para sistema de apelidos)
-            const resposta = ResponseBuilder.gerarRespostaTemplate(
-                mensagemLimpa,
-                parametrosFinais,
-                estiloResposta,
-                message.author.username,
-                message.author.id  // Passa userId para reconhecimento de apelidos
-            );
+            let resposta;
+
+            // 4. TENTAR GERAR RESPOSTA COM IA (se disponível)
+            if (global.aiService) {
+                try {
+                    console.log(`[IA] Gerando resposta com IA para ${apelidoDetectado}...`);
+                    
+                    // Contexto adicional da conversa
+                    const context = {
+                        channelType: message.channel.type,
+                        username: message.author.username,
+                        isMention: isMention,
+                        isReply: isReplyingToBot,
+                        tipoRelacao: tipoRelacao
+                    };
+
+                    // Gerar resposta com IA
+                    resposta = await global.aiService.generateResponse(
+                        mensagemLimpa,
+                        perfil,
+                        context
+                    );
+
+                    console.log(`[IA] ✅ Resposta gerada com IA`);
+
+                } catch (error) {
+                    console.warn(`[IA] ⚠️ Falha na IA, usando fallback: ${error.message}`);
+                    
+                    // FALLBACK: usar templates se IA falhar
+                    resposta = ResponseBuilder.gerarRespostaTemplate(
+                        mensagemLimpa,
+                        parametrosFinais,
+                        estiloResposta,
+                        message.author.username,
+                        message.author.id
+                    );
+                }
+            } else {
+                // IA não disponível - usar templates
+                console.log(`[IA] ℹ️ IA desabilitada, usando templates`);
+                resposta = ResponseBuilder.gerarRespostaTemplate(
+                    mensagemLimpa,
+                    parametrosFinais,
+                    estiloResposta,
+                    message.author.username,
+                    message.author.id
+                );
+            }
 
             // 5. Incrementar contador de interações
             UserPersonality.incrementInteraction(message.author.id, message.guild.id);
@@ -80,16 +134,16 @@ module.exports = {
             await message.reply(resposta);
 
             // Log para console (usa apelido detectado)
-            console.log(`[PERSONALITY] Respondeu para ${apelidoDetectado} | Tipo: ${tipoRelacao} | Tom: ${estiloResposta.tom}`);
+            console.log(`[IA] Respondeu para ${apelidoDetectado} | Tipo: ${tipoRelacao} | Tom: ${estiloResposta.tom}`);
 
         } catch (error) {
-            console.error('[PERSONALITY] Erro ao processar menção:', error);
+            console.error('[IA] Erro ao processar mensagem:', error);
             
             // Resposta de fallback em caso de erro
             try {
                 await message.reply('Hmm... algo deu errado aqui 🤔');
             } catch (replyError) {
-                console.error('[PERSONALITY] Erro ao enviar resposta de fallback:', replyError);
+                console.error('[IA] Erro ao enviar resposta de fallback:', replyError);
             }
         }
     }

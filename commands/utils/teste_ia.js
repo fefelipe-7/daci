@@ -1,109 +1,114 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const AIService = require('../../core/AIService.js');
-const { getUserPersonality } = require('../../models/UserPersonality.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('teste_ia')
-        .setDescription('🧪 Testa o serviço de IA com sua personalidade')
-        .addStringOption(option =>
-            option.setName('mensagem')
-                .setDescription('Mensagem para testar a IA')
-                .setRequired(true)
-        ),
+        .setDescription('🧪 [ADMIN] Testa conexão com OpenRouter API')
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async execute(interaction) {
-        await interaction.deferReply();
+        await interaction.deferReply({ ephemeral: true });
 
         try {
-            // Verificar se OPENROUTE_KEY está configurada
-            if (!process.env.OPENROUTE_KEY) {
+            // Verificar se AI Service está disponível
+            if (!global.aiService) {
                 return await interaction.editReply({
-                    content: '❌ OPENROUTE_KEY não configurada no .env\n\n' +
-                             'Configure a chave da API OpenRouter nas variáveis de ambiente.'
+                    content: '⚠️ **Serviço de IA não inicializado**\n\n' +
+                             '**Motivo:** OPENROUTE_KEY não configurada no .env\n\n' +
+                             '**Como configurar:**\n' +
+                             '1. Obtenha chave em: https://openrouter.ai/\n' +
+                             '2. Adicione `OPENROUTE_KEY=sk-or-v1-...` no .env\n' +
+                             '3. Reinicie o bot'
                 });
             }
 
-            // Inicializar AI Service
-            const aiService = new AIService(process.env.OPENROUTE_KEY);
-
-            // Obter mensagem
-            const mensagem = interaction.options.getString('mensagem');
-
-            // Carregar perfil do usuário
-            const userProfile = getUserPersonality(interaction.user.id);
-
-            // Gerar resposta
+            // Testar conexão
+            console.log('🧪 [ADMIN] Testando conexão com OpenRouter...');
             const startTime = Date.now();
-            const response = await aiService.generateResponse(
-                mensagem,
-                userProfile,
-                {
-                    channelType: interaction.channel.type,
-                    username: interaction.user.username
-                }
-            );
+            const testResult = await global.aiService.testConnection();
             const responseTime = Date.now() - startTime;
 
-            // Criar embed com resultado
-            const embed = new EmbedBuilder()
-                .setColor('#00FF00')
-                .setTitle('🤖 Teste de IA - DACI Bot')
-                .setDescription('Resposta gerada com sucesso!')
-                .addFields(
-                    {
-                        name: '📨 Sua Mensagem',
-                        value: `\`\`\`${mensagem}\`\`\``,
-                        inline: false
-                    },
-                    {
-                        name: '🤖 Resposta da IA',
-                        value: `\`\`\`${response}\`\`\``,
-                        inline: false
-                    },
-                    {
-                        name: '👤 Seu Perfil',
-                        value: userProfile 
-                            ? `${userProfile.apelido || userProfile.username}\n` +
-                              `Afinidade: ${userProfile.parametros?.afinidade || 0.5}`
-                            : 'Perfil padrão',
-                        inline: true
-                    },
-                    {
-                        name: '⏱️ Tempo de Resposta',
-                        value: `${responseTime}ms`,
-                        inline: true
-                    },
-                    {
-                        name: '📊 Estatísticas',
-                        value: `Modelo usado: ${aiService.modelManager.selectBestModel().name.split('/')[1]}`,
-                        inline: false
-                    }
-                )
-                .setFooter({ text: 'Sistema de IA com OpenRouter' })
-                .setTimestamp();
+            if (testResult.success) {
+                const stats = global.aiService.getStats();
+                
+                const embed = new EmbedBuilder()
+                    .setColor('#00FF00')
+                    .setTitle('✅ Teste de IA - Conexão OK')
+                    .setDescription('Serviço de IA está funcionando corretamente!')
+                    .addFields(
+                        {
+                            name: '🔗 Status da Conexão',
+                            value: '✅ Conectado ao OpenRouter',
+                            inline: false
+                        },
+                        {
+                            name: '🤖 Modelo de Teste',
+                            value: `\`${testResult.model.split('/')[1]}\``,
+                            inline: true
+                        },
+                        {
+                            name: '⏱️ Tempo de Resposta',
+                            value: `${responseTime}ms`,
+                            inline: true
+                        },
+                        {
+                            name: '📊 Estatísticas de Uso',
+                            value: `Total: ${stats.ai.totalRequests} requisições\n` +
+                                   `Sucesso: ${stats.ai.successRate}\n` +
+                                   `Tempo médio: ${stats.ai.avgResponseTime}`,
+                            inline: false
+                        },
+                        {
+                            name: '🎯 Como Usar',
+                            value: '**Para conversar com IA:**\n' +
+                                   '• Mencione o bot: `@DACI oi, como vai?`\n' +
+                                   '• Responda mensagens dele\n\n' +
+                                   '**Comandos admin:**\n' +
+                                   '• `/ia_stats` - Ver estatísticas\n' +
+                                   '• `/ia_modelos` - Listar modelos',
+                            inline: false
+                        }
+                    )
+                    .setFooter({ text: 'A IA é usada apenas em menções e respostas, não em comandos slash' })
+                    .setTimestamp();
 
-            await interaction.editReply({ embeds: [embed] });
+                await interaction.editReply({ embeds: [embed] });
+            } else {
+                const errorEmbed = new EmbedBuilder()
+                    .setColor('#FF0000')
+                    .setTitle('❌ Teste de IA - Conexão Falhou')
+                    .setDescription('Erro ao conectar com OpenRouter')
+                    .addFields(
+                        {
+                            name: '❌ Erro',
+                            value: `\`\`\`${testResult.error}\`\`\``,
+                            inline: false
+                        },
+                        {
+                            name: '💡 Possíveis Soluções',
+                            value: '• Verifique se OPENROUTE_KEY está correta\n' +
+                                   '• Confirme se a chave é válida em https://openrouter.ai/\n' +
+                                   '• Verifique conexão com internet\n' +
+                                   '• Veja se os modelos estão disponíveis',
+                            inline: false
+                        }
+                    )
+                    .setTimestamp();
+
+                await interaction.editReply({ embeds: [errorEmbed] });
+            }
 
         } catch (error) {
-            console.error('Erro no comando teste_ia:', error);
+            console.error('[ADMIN] Erro no comando teste_ia:', error);
 
             const errorEmbed = new EmbedBuilder()
                 .setColor('#FF0000')
                 .setTitle('❌ Erro no Teste de IA')
-                .setDescription('Ocorreu um erro ao tentar gerar resposta.')
+                .setDescription('Ocorreu um erro ao tentar testar a conexão.')
                 .addFields(
                     {
                         name: 'Erro',
                         value: `\`\`\`${error.message}\`\`\``,
-                        inline: false
-                    },
-                    {
-                        name: '💡 Possíveis Soluções',
-                        value: '• Verifique se OPENROUTE_KEY está configurada\n' +
-                               '• Confirme se a chave é válida\n' +
-                               '• Verifique sua conexão com a internet\n' +
-                               '• Veja se os modelos estão disponíveis',
                         inline: false
                     }
                 )
