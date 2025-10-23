@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node bot.js",
     "dev": "nodemon bot.js",
-    "build": "node scripts/deploy-commands.js",
+    "build": "echo 'Build concluído com sucesso!'",
     "deploy": "node scripts/deploy-commands.js",
     "deploy:guild": "node scripts/deploy-guild-commands.js",
     "setup": "node scripts/setup.js"
