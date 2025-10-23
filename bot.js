@@ -63,6 +63,33 @@ const client = new Client({
 // Coleção de comandos
 client.commands = new Collection();
 
+// Inicializar AI Service (se OPENROUTE_KEY configurada)
+global.aiService = null;
+if (process.env.OPENROUTE_KEY) {
+    try {
+        const AIService = require('./core/AIService.js');
+        global.aiService = new AIService(process.env.OPENROUTE_KEY);
+        console.log('✅ AI Service inicializado com sucesso');
+        
+        // Testar conexão em background
+        global.aiService.testConnection().then(result => {
+            if (result.success) {
+                console.log(`🎉 AI Service pronto! Modelo teste: ${result.model.split('/')[1]}`);
+            } else {
+                console.warn('⚠️ AI Service com problemas:', result.error);
+            }
+        }).catch(err => {
+            console.warn('⚠️ Teste de IA falhou:', err.message);
+        });
+    } catch (error) {
+        console.error('❌ Erro ao inicializar AI Service:', error.message);
+        console.log('💡 O bot vai funcionar normalmente sem IA');
+    }
+} else {
+    console.log('ℹ️ OPENROUTE_KEY não configurada - AI Service desabilitado');
+    console.log('💡 Configure OPENROUTE_KEY no .env para ativar respostas com IA');
+}
+
 // Carregar comandos
 function loadCommands() {
     const commandsPath = path.join(__dirname, 'commands');
