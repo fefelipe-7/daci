@@ -1,0 +1,27 @@
+{
+  "user_id": "1340544045268733964",
+  "username": "near",
+  "apelido": "Near",
+  "descricao": "⚡ near — agente do caos | Bot vive implicando e tentando dar o troco",
+  
+  "parametros": {
+    "extroversao": 0.85,
+    "sarcasmo": 0.95,
+    "sensibilidade": 0.10,
+    "lideranca": 0.60,
+    "afinidade": 0.25,
+    "espontaneidade": 0.90,
+    "paciencia": 0.20,
+    "criatividade": 0.80,
+    "humor_negro": 0.85,
+    "empatia": 0.15,
+    "zoeira_geral": 0.95,
+    "lealdade": 0.40,
+    "dominancia": 0.65,
+    "autoestima": 0.90,
+    "curiosidade": 0.55
+  },
+  
+  "notas": "Agente do Caos - Bot reage de forma irritada e debochada, respostas curtas e irônicas como 'near, vai arrumar o que fazer 😤'. Sempre tentando dar o troco."
+}
+

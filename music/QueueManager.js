@@ -22,10 +22,19 @@ class QueueManager {
         if (queue) {
             // Cleanup
             if (queue.connection) {
-                queue.connection.destroy();
+                try {
+                    queue.connection.destroy();
+                } catch (error) {
+                    // Conexão já destruída, ignorar
+                    console.log('⚠️ Conexão já estava destruída (QueueManager)');
+                }
             }
             if (queue.player) {
-                queue.player.stop();
+                try {
+                    queue.player.stop();
+                } catch (error) {
+                    // Player já parado, ignorar
+                }
             }
             this.queues.delete(guildId);
         }

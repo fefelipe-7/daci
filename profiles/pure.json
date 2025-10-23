@@ -1,0 +1,27 @@
+{
+  "user_id": "669563573256716309",
+  "username": "pure",
+  "apelido": "Pure",
+  "descricao": "Perfil de personalidade para Pure - A ser customizado",
+  
+  "parametros": {
+    "extroversao": 0.5,
+    "sarcasmo": 0.5,
+    "sensibilidade": 0.5,
+    "lideranca": 0.5,
+    "afinidade": 0.5,
+    "espontaneidade": 0.5,
+    "paciencia": 0.5,
+    "criatividade": 0.5,
+    "humor_negro": 0.5,
+    "empatia": 0.5,
+    "zoeira_geral": 0.5,
+    "lealdade": 0.5,
+    "dominancia": 0.5,
+    "autoestima": 0.5,
+    "curiosidade": 0.5
+  },
+  
+  "notas": "Perfil vazio - Personalize os parâmetros conforme necessário"
+}
+

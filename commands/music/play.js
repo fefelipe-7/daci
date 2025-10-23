@@ -14,8 +14,15 @@ module.exports = {
                 .setRequired(true)),
 
     async execute(interaction) {
-        // Defer IMEDIATAMENTE
-        await interaction.deferReply();
+        // Defer IMEDIATAMENTE (sem logs para máxima velocidade)
+        try {
+            if (!interaction.deferred && !interaction.replied) {
+                await interaction.deferReply();
+            }
+        } catch (error) {
+            console.error('[PLAY] Erro ao fazer defer:', error.message);
+            return;
+        }
 
         const query = interaction.options.getString('musica');
         const voiceChannel = interaction.member.voice.channel;

@@ -1,3 +1,42 @@
+// === CRITICAL: Interceptar require ANTES DE QUALQUER IMPORT ===
+const Module = require('module');
+const originalRequire = Module.prototype.require;
+const sodium = require('sodium-javascript');
+
+// Wrapper compatível
+const sodiumWrapper = {
+    ready: Promise.resolve(),
+    crypto_secretbox_KEYBYTES: sodium.crypto_secretbox_KEYBYTES,
+    crypto_secretbox_NONCEBYTES: sodium.crypto_secretbox_NONCEBYTES,
+    crypto_secretbox_MACBYTES: sodium.crypto_secretbox_MACBYTES,
+    crypto_secretbox_easy(message, nonce, key) {
+        const cipher = Buffer.alloc(message.length + sodium.crypto_secretbox_MACBYTES);
+        sodium.crypto_secretbox_easy(cipher, message, nonce, key);
+        return cipher;
+    },
+    crypto_secretbox_open_easy(ciphertext, nonce, key) {
+        const message = Buffer.alloc(ciphertext.length - sodium.crypto_secretbox_MACBYTES);
+        const result = sodium.crypto_secretbox_open_easy(message, ciphertext, nonce, key);
+        return result ? message : null;
+    },
+    randombytes_buf(buffer) {
+        sodium.randombytes_buf(buffer);
+        return buffer;
+    }
+};
+
+// Interceptar TODOS os requires de sodium
+Module.prototype.require = function(id) {
+    if (id === 'sodium' || id === 'libsodium' || id === 'libsodium-wrappers' || 
+        id === 'sodium-native' || id === '@discordjs/libsodium' || id === 'tweetnacl') {
+        console.log(`[SODIUM] Interceptado '${id}' -> usando sodium-javascript`);
+        return sodiumWrapper;
+    }
+    return originalRequire.apply(this, arguments);
+};
+
+process.env.FFMPEG_PATH = require('ffmpeg-static');
+
 const { Client, GatewayIntentBits, Collection, ActivityType } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
@@ -82,61 +121,7 @@ function loadEvents() {
     }
 }
 
-// Evento quando o bot está pronto
-client.once('ready', () => {
-    console.log(`🤖 ${client.user.tag} está online!`);
-    console.log(`📊 Conectado a ${client.guilds.cache.size} servidor(es)`);
-    console.log(`👥 Servindo ${client.users.cache.size} usuário(s)`);
-    
-    // Definir status do bot
-    client.user.setActivity('múltiplas funcionalidades | !help', { 
-        type: ActivityType.Watching 
-    });
-});
-
-// Evento de interação (slash commands)
-client.on('interactionCreate', async interaction => {
-    if (!interaction.isChatInputCommand()) return;
-
-    const command = client.commands.get(interaction.commandName);
-    if (!command) return;
-
-    try {
-        await command.execute(interaction);
-    } catch (error) {
-        console.error(`Erro ao executar comando ${interaction.commandName}:`, error);
-        
-        const errorMessage = {
-            content: '❌ Houve um erro ao executar este comando!',
-            ephemeral: true
-        };
-
-        if (interaction.replied || interaction.deferred) {
-            await interaction.followUp(errorMessage);
-        } else {
-            await interaction.reply(errorMessage);
-        }
-    }
-});
-
-// Evento de mensagem (comandos com prefixo)
-client.on('messageCreate', async message => {
-    if (message.author.bot) return;
-    if (!message.content.startsWith(config.bot.prefix)) return;
-
-    const args = message.content.slice(config.bot.prefix.length).trim().split(/ +/);
-    const commandName = args.shift().toLowerCase();
-
-    const command = client.commands.get(commandName);
-    if (!command) return;
-
-    try {
-        await command.execute(message, args);
-    } catch (error) {
-        console.error(`Erro ao executar comando ${commandName}:`, error);
-        await message.reply('❌ Houve um erro ao executar este comando!');
-    }
-});
+// Todos os eventos são carregados via loadEvents() abaixo
 
 // Carregar comandos e eventos
 loadCommands();

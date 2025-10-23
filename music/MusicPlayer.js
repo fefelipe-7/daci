@@ -1,16 +1,25 @@
-const { createAudioPlayer, createAudioResource, AudioPlayerStatus, VoiceConnectionStatus, joinVoiceChannel } = require('@discordjs/voice');
+const { createAudioPlayer, createAudioResource, AudioPlayerStatus, VoiceConnectionStatus, joinVoiceChannel, entersState, StreamType } = require('@discordjs/voice');
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const ytdl = require('ytdl-core');
+const play = require('play-dl');
 
 class MusicPlayer {
     async createConnection(voiceChannel, guildId) {
-        const connection = joinVoiceChannel({
-            channelId: voiceChannel.id,
-            guildId: guildId,
-            adapterCreator: voiceChannel.guild.voiceAdapterCreator,
-        });
+        try {
+            const connection = joinVoiceChannel({
+                channelId: voiceChannel.id,
+                guildId: guildId,
+                adapterCreator: voiceChannel.guild.voiceAdapterCreator,
+            });
 
-        return connection;
+            // Aguardar conexão estar pronta
+            await entersState(connection, VoiceConnectionStatus.Ready, 30_000);
+            
+            console.log('✅ Conectado ao canal de voz!');
+            return connection;
+        } catch (error) {
+            console.error('❌ Erro ao conectar ao canal de voz:', error);
+            throw error;
+        }
     }
 
     async playSong(queue) {
@@ -42,16 +51,18 @@ class MusicPlayer {
                 queue.connection.subscribe(queue.player);
             }
 
-            // Criar stream de áudio usando ytdl-core (RÁPIDO!)
+            // Criar stream de áudio usando play-dl (ROBUSTO!)
             console.log('🎵 Tocando:', song.title);
+            console.log('🔗 URL:', song.url);
             
-            const stream = ytdl(song.url, {
-                filter: 'audioonly',
-                quality: 'highestaudio',
-                highWaterMark: 1 << 25 // Buffer maior para melhor performance
-            });
+            if (!song.url || song.url === 'undefined') {
+                throw new Error('URL da música é inválida');
+            }
             
-            const resource = createAudioResource(stream, {
+            const stream = await play.stream(song.url);
+            
+            const resource = createAudioResource(stream.stream, {
+                inputType: stream.type,
                 inlineVolume: true
             });
 
@@ -112,7 +123,7 @@ class MusicPlayer {
     async sendNowPlayingMessage(queue, song) {
         if (!queue.textChannel) return;
 
-        const durationFormatted = this.formatDuration(song.duration);
+        const durationFormatted = song.durationFormatted || this.formatDuration(song.duration);
         
         const platformEmoji = {
             'spotify': '🎵',
@@ -191,7 +202,12 @@ class MusicPlayer {
         }
 
         if (queue.connection) {
-            queue.connection.destroy();
+            try {
+                queue.connection.destroy();
+            } catch (error) {
+                // Conexão já foi destruída, ignorar
+                console.log('⚠️ Conexão já estava destruída');
+            }
         }
 
         const QueueManager = require('./QueueManager');

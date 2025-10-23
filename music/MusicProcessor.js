@@ -6,6 +6,20 @@ class MusicProcessor {
         this.cache = new Map(); // Cache de Spotify -> YouTube
     }
 
+    // Helper para formatar duração
+    formatDuration(seconds) {
+        if (!seconds || seconds === 0) return '0:00';
+        
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        
+        if (hours > 0) {
+            return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+        return `${minutes}:${secs.toString().padStart(2, '0')}`;
+    }
+
     async processSong(query, platform) {
         try {
             switch (platform) {
@@ -65,6 +79,7 @@ class MusicProcessor {
                 url: ytResult.url,
                 thumbnail: data.thumbnail_url || ytResult.thumbnail,
                 duration: ytResult.duration,
+                durationFormatted: this.formatDuration(ytResult.duration),
                 platform: 'spotify',
                 originalUrl: url
             };
@@ -82,26 +97,29 @@ class MusicProcessor {
 
     async processYouTube(url) {
         try {
-            // Lazy load ytdl-core
-            if (!ytdl) ytdl = require('ytdl-core');
+            // Lazy load play-dl
+            const play = require('play-dl');
 
             console.log('🎵 Processando YouTube...');
             
             // Validar URL
-            if (!ytdl.validateURL(url)) {
+            if (!play.yt_validate(url)) {
                 throw new Error('URL inválida do YouTube');
             }
 
-            // Obter informações básicas (rápido)
-            const info = await ytdl.getBasicInfo(url);
-            const details = info.videoDetails;
+            // Obter informações
+            const info = await play.video_info(url);
+            const video = info.video_details;
+            
+            const duration = video.durationInSec || 0;
             
             return {
-                title: details.title,
-                artist: details.author?.name || details.ownerChannelName || 'YouTube',
-                url: details.video_url,
-                thumbnail: details.thumbnails?.[0]?.url || '',
-                duration: parseInt(details.lengthSeconds) || 0,
+                title: video.title,
+                artist: video.channel?.name || 'YouTube',
+                url: video.url,
+                thumbnail: video.thumbnails[0]?.url || '',
+                duration: duration,
+                durationFormatted: this.formatDuration(duration),
                 platform: 'youtube',
                 originalUrl: url
             };
@@ -124,35 +142,41 @@ class MusicProcessor {
 
     async searchYouTube(query) {
         try {
-            // Lazy load
-            if (!ytsr) ytsr = require('youtube-sr').default;
+            // Lazy load play-dl
+            const play = require('play-dl');
 
             console.log('🔍 Buscando no YouTube:', query);
             
-            // Busca rápida
-            const results = await ytsr.searchOne(query, 'video');
+            // Busca usando play-dl
+            const results = await play.search(query, { limit: 1 });
             
-            if (!results) {
+            if (!results || results.length === 0) {
                 throw new Error('Nenhum resultado encontrado');
             }
 
+            const video = results[0];
+
             console.log('📝 Resultado YouTube:', {
-                title: results.title,
-                id: results.id
+                title: video.title,
+                id: video.id
             });
 
-            // Construir URL
-            const videoUrl = `https://www.youtube.com/watch?v=${results.id}`;
-
-            return {
-                title: results.title || 'Sem título',
-                artist: results.channel?.name || 'YouTube',
-                url: videoUrl,
-                thumbnail: results.thumbnail?.url || results.thumbnail?.displayThumbnailURL?.() || '',
-                duration: results.duration || 0,
+            const duration = video.durationInSec || 0;
+            
+            const songInfo = {
+                title: video.title || 'Sem título',
+                artist: video.channel?.name || 'YouTube',
+                url: video.url,
+                thumbnail: video.thumbnails[0]?.url || '',
+                duration: duration,
+                durationFormatted: this.formatDuration(duration),
                 platform: 'youtube',
-                originalUrl: videoUrl
+                originalUrl: video.url
             };
+            
+            console.log('📦 SongInfo gerado:', JSON.stringify(songInfo, null, 2));
+            
+            return songInfo;
         } catch (error) {
             console.error('Erro ao buscar no YouTube:', error);
             throw new Error('Não foi possível encontrar a música no YouTube');

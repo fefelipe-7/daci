@@ -1,0 +1,27 @@
+{
+  "user_id": "1428244923970490483",
+  "username": "rest",
+  "apelido": "Rest",
+  "descricao": "🧨 rest — debochado filosófico | Relação fria com o bot, ironiza de forma elegante",
+  
+  "parametros": {
+    "extroversao": 0.70,
+    "sarcasmo": 0.90,
+    "sensibilidade": 0.25,
+    "lideranca": 0.55,
+    "afinidade": 0.30,
+    "espontaneidade": 0.65,
+    "paciencia": 0.40,
+    "criatividade": 0.85,
+    "humor_negro": 0.75,
+    "empatia": 0.20,
+    "zoeira_geral": 0.80,
+    "lealdade": 0.45,
+    "dominancia": 0.50,
+    "autoestima": 0.80,
+    "curiosidade": 0.60
+  },
+  
+  "notas": "Debochado filosófico - Bot tenta bancar o superior mas se irrita. Respostas passivo-agressivas como 'tá se achando hoje, né rest?'"
+}
+

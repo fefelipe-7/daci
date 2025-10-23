@@ -1,11 +1,14 @@
-const QueueManager = require('../music/QueueManager');
-const MusicPlayer = require('../music/MusicPlayer');
-
 module.exports = {
     name: 'interactionCreate',
     async execute(interaction) {
         // Handler para comandos slash
         if (interaction.isChatInputCommand()) {
+            // Log único para debug de latência
+            const idade = Date.now() - interaction.createdTimestamp;
+            if (idade > 1000) {
+                console.log(`⚠️ Interação /${interaction.commandName} chegou com ${idade}ms de idade`);
+            }
+            
             const command = interaction.client.commands.get(interaction.commandName);
             if (!command) return;
 
@@ -36,6 +39,10 @@ module.exports = {
         if (interaction.isButton()) {
             // Apenas botões de música
             if (!interaction.customId.startsWith('music_')) return;
+
+            // Lazy load (só quando necessário)
+            const QueueManager = require('../music/QueueManager');
+            const MusicPlayer = require('../music/MusicPlayer');
 
             const queue = QueueManager.get(interaction.guild.id);
 
