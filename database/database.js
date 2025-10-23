@@ -41,6 +41,24 @@ class DatabaseManager {
                 config TEXT DEFAULT '{}'
             )
         `);
+
+        // Tabela de interações de IA
+        this.db.exec(`
+            CREATE TABLE IF NOT EXISTS ai_interactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT,
+                guild_id TEXT,
+                timestamp TEXT,
+                message_input TEXT,
+                response_output TEXT,
+                model_used TEXT,
+                response_time INTEGER,
+                tokens_used INTEGER,
+                success BOOLEAN,
+                fallback_level INTEGER,
+                metadata TEXT
+            )
+        `);
     }
 
     // Métodos para usuários

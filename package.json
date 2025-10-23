@@ -39,6 +39,7 @@
     "ffmpeg-static": "^5.2.0",
     "node-fetch": "^2.7.0",
     "play-dl": "^1.9.7",
+    "sentiment": "^5.0.2",
     "sodium-javascript": "^0.8.0",
     "tweetnacl": "^1.0.3",
     "youtube-dl-exec": "^2.4.5",

@@ -69,32 +69,31 @@ const client = new Client({
 // Coleção de comandos
 client.commands = new Collection();
 
-// Inicializar AI Service (se OPENROUTE_KEY configurada)
-global.aiService = null;
+// Inicializar Processor (Nova Arquitetura de 3 Camadas)
+// O Processor será inicializado no messageCreate.js quando necessário
 if (process.env.OPENROUTE_KEY) {
-    try {
-        logger.info('startup', 'Inicializando AI Service...');
-        const AIService = require('./core/AIService.js');
-        global.aiService = new AIService(process.env.OPENROUTE_KEY);
-        logger.startup('AI Service', 'success');
-        
-        // Testar conexão em background
-        global.aiService.testConnection().then(result => {
+    logger.info('startup', 'OPENROUTE_KEY configurada - Sistema de IA ativo (3 camadas)');
+    logger.info('startup', 'Preprocessor → Processor → Postprocessor');
+    
+    // Testar conexão em background
+    (async () => {
+        try {
+            const Processor = require('./core/Processor.js');
+            const processor = new Processor(process.env.OPENROUTE_KEY);
+            const result = await processor.testConnection();
+            
             if (result.success) {
-                logger.startup('AI Service', 'success', `Modelo teste: ${result.model.split('/')[1]}`);
+                logger.success('startup', `Conexão OK - Modelo: ${result.model.split('/')[1]}`);
             } else {
-                logger.warn('startup', `AI Service com problemas: ${result.error}`);
+                logger.warn('startup', `Problema na conexão: ${result.error}`);
             }
-        }).catch(err => {
-            logger.warn('startup', `Teste de IA falhou: ${err.message}`);
-        });
-    } catch (error) {
-        logger.error('startup', 'Erro ao inicializar AI Service', error);
-        logger.info('startup', 'Bot vai funcionar normalmente sem IA');
-    }
+        } catch (error) {
+            logger.warn('startup', `Teste de conexão falhou: ${error.message}`);
+        }
+    })();
 } else {
-    logger.info('startup', 'OPENROUTE_KEY não configurada - AI Service desabilitado');
-    logger.info('startup', 'Configure OPENROUTE_KEY no .env para ativar respostas com IA');
+    logger.info('startup', 'OPENROUTE_KEY não configurada - Usando apenas templates');
+    logger.info('startup', 'Configure OPENROUTE_KEY no .env para ativar IA');
 }
 
 // Carregar comandos

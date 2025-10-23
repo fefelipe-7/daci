@@ -1,8 +1,15 @@
+/**
+ * MessageCreate Event - Orquestrador principal das 3 camadas
+ * Preprocessor → Processor → Postprocessor
+ */
+
+const Preprocessor = require('../core/Preprocessor');
+const Processor = require('../core/Processor');
+const Postprocessor = require('../core/Postprocessor');
 const UserPersonality = require('../models/UserPersonality');
-const PersonalityEngine = require('../core/PersonalityEngine');
-const ResponseBuilder = require('../core/ResponseBuilder');
 const UserNicknames = require('../core/UserNicknames');
 const logger = require('../core/Logger');
+const database = require('../database/database');
 const fs = require('fs');
 const path = require('path');
 
@@ -14,12 +21,36 @@ if (!fs.existsSync(logsDir)) {
 
 const logFile = path.join(logsDir, 'personality_interactions.log');
 
-// Helper para escrever log
-function logInteraction(userId, username, mensagem, resposta, parametros, estilo) {
-    const timestamp = new Date().toISOString();
-    const logEntry = `[${timestamp}] USER: ${username} (${userId})\nMENSAGEM: ${mensagem}\nRESPOSTA: ${resposta}\nPARAMETROS: sarcasmo=${parametros.sarcasmo.toFixed(2)}, afinidade=${parametros.afinidade.toFixed(2)}, empatia=${parametros.empatia.toFixed(2)}\nESTILO: ${estilo.tom} (provocacao: ${estilo.provocacao})\n${'='.repeat(80)}\n`;
+// Instanciar as três camadas
+let preprocessor = null;
+let processor = null;
+let postprocessor = null;
+
+// Inicializar camadas quando houver API key
+function initializeLayers() {
+    if (!preprocessor) {
+        preprocessor = new Preprocessor();
+    }
     
-    fs.appendFileSync(logFile, logEntry, 'utf8');
+    if (!processor && process.env.OPENROUTE_KEY) {
+        processor = new Processor(process.env.OPENROUTE_KEY);
+    }
+    
+    if (!postprocessor) {
+        postprocessor = new Postprocessor(processor, database);
+    }
+}
+
+// Helper para escrever log legado (manter compatibilidade)
+function logInteractionLegacy(userId, username, mensagem, resposta, parametros, estilo) {
+    try {
+        const timestamp = new Date().toISOString();
+        const logEntry = `[${timestamp}] USER: ${username} (${userId})\nMENSAGEM: ${mensagem}\nRESPOSTA: ${resposta}\nPARAMETROS: sarcasmo=${parametros.sarcasmo.toFixed(2)}, afinidade=${parametros.afinidade.toFixed(2)}, empatia=${parametros.empatia.toFixed(2)}\nESTILO: ${estilo.tom} (provocacao: ${estilo.provocacao})\n${'='.repeat(80)}\n`;
+        
+        fs.appendFileSync(logFile, logEntry, 'utf8');
+    } catch (error) {
+        logger.error('message', 'Erro ao escrever log legado', error);
+    }
 }
 
 module.exports = {
@@ -45,6 +76,9 @@ module.exports = {
         // Ignorar se não for menção nem resposta ao bot
         if (!isMention && !isReplyingToBot) return;
 
+        // Inicializar camadas se necessário
+        initializeLayers();
+
         try {
             // Log da mensagem recebida
             logger.messageReceived(
@@ -55,79 +89,105 @@ module.exports = {
                 isReplyingToBot
             );
 
-            // 1. Carregar perfil do usuário (criar se não existe)
-            let perfil = UserPersonality.get(message.author.id, message.guild.id);
-            
-            // DEBUG: Verificar reconhecimento de apelido
             const apelidoDetectado = UserNicknames.getNickname(message.author.id);
-            logger.personalityLoaded(
-                message.author.id,
-                message.author.username,
-                apelidoDetectado,
-                perfil.parametros?.afinidade || 0.5
-            );
             
-            // Atualizar username se necessário
-            if (perfil.username === 'Unknown') {
-                UserPersonality.update(message.author.id, message.guild.id, { 
-                    username: message.author.username 
-                });
-                perfil.username = message.author.username;
-            }
-
-            // 2. Calcular personalidade composta
-            const { parametrosFinais, tipoRelacao, estiloResposta } = PersonalityEngine.processarPerfil(perfil);
-
-            // 3. Remover menção do bot da mensagem para análise
-            const mensagemLimpa = message.content
-                .replace(/<@!?\d+>/g, '')
-                .trim();
-
+            // ============================================================
+            // NOVA ARQUITETURA: 3 CAMADAS
+            // ============================================================
+            
             let resposta;
-
-            // 4. TENTAR GERAR RESPOSTA COM IA (se disponível)
-            const startTime = Date.now();
-            if (global.aiService) {
+            let finalResponse;
+            
+            if (processor && preprocessor && postprocessor) {
+                // USAR NOVA ARQUITETURA
+                logger.info('message', '🔄 Usando arquitetura de 3 camadas');
+                
                 try {
-                    logger.aiRequest(apelidoDetectado, mensagemLimpa, 'auto-select');
+                    // 1. PREPROCESSAR
+                    logger.debug('message', '1️⃣ Preprocessando...');
+                    const package = await preprocessor.process(message, {
+                        user: message.author,
+                        channel: message.channel,
+                        guild: message.guild
+                    });
                     
-                    // Contexto adicional da conversa
-                    const context = {
-                        channelType: message.channel.type,
-                        username: message.author.username,
-                        isMention: isMention,
-                        isReply: isReplyingToBot,
-                        tipoRelacao: tipoRelacao
-                    };
-
-                    // Gerar resposta com IA
-                    resposta = await global.aiService.generateResponse(
-                        mensagemLimpa,
-                        perfil,
-                        context
-                    );
-
-                    const responseTime = Date.now() - startTime;
-                    logger.aiResponse(apelidoDetectado, responseTime, true);
-                    logger.performance('Geração IA', responseTime);
-
-                } catch (error) {
-                    const responseTime = Date.now() - startTime;
-                    logger.warn('ai', `Falha na IA para ${apelidoDetectado}, usando fallback: ${error.message}`);
-                    logger.aiResponse(apelidoDetectado, responseTime, false);
+                    // 2. PROCESSAR (IA)
+                    logger.debug('message', '2️⃣ Processando com IA...');
+                    let rawResponse = null;
                     
-                    // FALLBACK: usar templates se IA falhar
-                    resposta = ResponseBuilder.gerarRespostaTemplate(
-                        mensagemLimpa,
-                        parametrosFinais,
-                        estiloResposta,
+                    try {
+                        logger.aiRequest(apelidoDetectado, package.prompt.user.substring(0, 100), 'auto-select');
+                        rawResponse = await processor.process(package);
+                        logger.aiResponse(apelidoDetectado, rawResponse.metrics.responseTime, true);
+                    } catch (error) {
+                        logger.warn('message', `IA falhou: ${error.message}`);
+                        logger.aiResponse(apelidoDetectado, 0, false);
+                        // rawResponse permanece null, Postprocessor vai usar fallback
+                    }
+                    
+                    // 3. POSTPROCESSAR
+                    logger.debug('message', '3️⃣ Postprocessando...');
+                    finalResponse = await postprocessor.process(rawResponse, package);
+                    
+                    resposta = finalResponse.content;
+                    
+                    // Log do resultado
+                    if (finalResponse.fallbackLevel > 0) {
+                        logger.warn('message', `Usou fallback nível ${finalResponse.fallbackLevel}`);
+                    } else {
+                        logger.success('message', `Resposta gerada com sucesso (score: ${finalResponse.metrics.styleScore?.toFixed(2) || 'N/A'})`);
+                    }
+                    
+                    // Log legado para compatibilidade
+                    const personality = package.metadata.personality;
+                    logInteractionLegacy(
+                        message.author.id,
                         message.author.username,
-                        message.author.id
+                        package.prompt.user,
+                        resposta,
+                        personality.parametrosFinais,
+                        personality.estiloResposta
                     );
+                    
+                } catch (error) {
+                    logger.error('message', 'Erro na arquitetura de 3 camadas, usando fallback de emergência', error);
+                    resposta = 'pô, deu um erro aqui, desculpa 😅';
                 }
+                
             } else {
-                // IA não disponível - usar templates
-                logger.info('ai', 'IA desabilitada, usando templates');
+                // FALLBACK: USAR SISTEMA LEGADO SE CAMADAS NÃO DISPONÍVEIS
+                logger.warn('message', '⚠️ Camadas não disponíveis, usando sistema legado');
+                
+                const ResponseBuilder = require('../core/ResponseBuilder');
+                const PersonalityEngine = require('../core/PersonalityEngine');
+                
+                // Carregar perfil
+                let perfil = UserPersonality.get(message.author.id, message.guild.id);
+                
+                logger.personalityLoaded(
+                    message.author.id,
+                    message.author.username,
+                    apelidoDetectado,
+                    perfil.parametros?.afinidade || 0.5
+                );
+                
+                // Atualizar username se necessário
+                if (perfil.username === 'Unknown') {
+                    UserPersonality.update(message.author.id, message.guild.id, { 
+                        username: message.author.username 
+                    });
+                    perfil.username = message.author.username;
+                }
+
+                // Calcular personalidade
+                const { parametrosFinais, tipoRelacao, estiloResposta } = PersonalityEngine.processarPerfil(perfil);
+
+                // Limpar mensagem
+                const mensagemLimpa = message.content
+                    .replace(/<@!?\d+>/g, '')
+                    .trim();
+
+                // Gerar resposta com templates
                 resposta = ResponseBuilder.gerarRespostaTemplate(
                     mensagemLimpa,
                     parametrosFinais,
@@ -135,38 +195,36 @@ module.exports = {
                     message.author.username,
                     message.author.id
                 );
+                
+                // Log legado
+                logInteractionLegacy(
+                    message.author.id,
+                    message.author.username,
+                    mensagemLimpa,
+                    resposta,
+                    parametrosFinais,
+                    estiloResposta
+                );
             }
 
-            // 5. Incrementar contador de interações
+            // Incrementar contador de interações
             UserPersonality.incrementInteraction(message.author.id, message.guild.id);
 
-            // 6. Registrar no log
-            logInteraction(
-                message.author.id,
-                message.author.username,
-                mensagemLimpa,
-                resposta,
-                parametrosFinais,
-                estiloResposta
-            );
-
-            // 7. Enviar resposta
+            // Enviar resposta
             await message.reply(resposta);
 
             // Log da resposta enviada
-            logger.personalityResponse(apelidoDetectado, tipoRelacao, estiloResposta.tom);
             logger.success('message', `Respondeu: "${resposta.substring(0, 50)}${resposta.length > 50 ? '...' : ''}"`);
 
         } catch (error) {
-            logger.error('message', 'Erro ao processar mensagem', error);
+            logger.error('message', 'Erro crítico ao processar mensagem', error);
             
-            // Resposta de fallback em caso de erro
+            // Resposta de fallback de emergência
             try {
                 await message.reply('Hmm... algo deu errado aqui 🤔');
             } catch (replyError) {
-                logger.error('message', 'Erro ao enviar resposta de fallback', replyError);
+                logger.error('message', 'Erro ao enviar resposta de emergência', replyError);
             }
         }
     }
 };
-

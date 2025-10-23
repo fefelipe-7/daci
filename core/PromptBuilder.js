@@ -177,23 +177,57 @@ EVITE:
     buildUserContext(message, context = {}) {
         let userPrompt = `Mensagem do usuário: "${message}"`;
 
-        // Adicionar contexto adicional se fornecido
-        if (context.previousMessages && context.previousMessages.length > 0) {
+        // Adicionar análise de sentimento se disponível
+        if (context.sentiment) {
+            const { classification, intensity, emotions } = context.sentiment;
+            userPrompt += `\n\nSentimento detectado: ${classification} (intensidade: ${intensity.toFixed(2)})`;
+            if (emotions && emotions.length > 0 && !emotions.includes('neutral')) {
+                userPrompt += `\nEmoções: ${emotions.join(', ')}`;
+            }
+        }
+
+        // Adicionar histórico de conversa
+        if (context.history && context.history.length > 0) {
             userPrompt += `\n\nContexto da conversa recente:`;
-            context.previousMessages.slice(-3).forEach(msg => {
-                userPrompt += `\n- ${msg.author}: ${msg.content}`;
+            context.history.slice(-5).forEach(msg => {
+                const author = msg.isBot ? 'Você (Daci)' : msg.author;
+                const content = msg.content.substring(0, 100);
+                userPrompt += `\n- ${author}: ${content}`;
             });
         }
 
-        if (context.channelType) {
-            userPrompt += `\n\nCanal: ${context.channelType}`;
+        // Adicionar contexto temporal
+        if (context.temporal) {
+            const { period, mood, isWeekend } = context.temporal;
+            const periodMsg = {
+                'morning': 'manhã',
+                'afternoon': 'tarde',
+                'evening': 'noite',
+                'night': 'madrugada'
+            }[period] || period;
+            
+            userPrompt += `\n\nContexto: ${periodMsg}`;
+            if (isWeekend) userPrompt += ' (fim de semana)';
         }
 
+        // Adicionar tipo de canal
+        if (context.channel) {
+            if (context.channel.isDM) {
+                userPrompt += `\nCanal: DM (conversa privada)`;
+            } else if (context.channel.name) {
+                userPrompt += `\nCanal: ${context.channel.name}`;
+            }
+        }
+
+        // Adicionar menções se houver
         if (context.mentions && context.mentions.length > 0) {
-            userPrompt += `\n\nMenções: ${context.mentions.join(', ')}`;
+            const userMentions = context.mentions.filter(m => m.type === 'user');
+            if (userMentions.length > 0) {
+                userPrompt += `\nMenções: ${userMentions.map(m => m.username).join(', ')}`;
+            }
         }
 
-        userPrompt += `\n\nResponda de forma natural, mantendo sua personalidade e o contexto do perfil do usuário. Seja você mesmo - o Daci.`;
+        userPrompt += `\n\nResponda de forma natural, considerando TODO o contexto acima. Mantenha sua personalidade e adapte-se ao sentimento e situação. Seja você mesmo - o Daci.`;
 
         return userPrompt;
     }
