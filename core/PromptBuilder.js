@@ -227,7 +227,9 @@ EVITE:
             }
         }
 
-        userPrompt += `\n\nResponda de forma natural, considerando TODO o contexto acima. Mantenha sua personalidade e adapte-se ao sentimento e situação. Seja você mesmo - o Daci.`;
+        userPrompt += `\n\nResponda de forma natural, considerando TODO o contexto acima. Mantenha sua personalidade e adapte-se ao sentimento e situação. Seja você mesmo - o Daci.
+
+IMPORTANTE: Responda de forma direta e concisa. NÃO faça perguntas no final da resposta a menos que seja absolutamente necessário para entender algo. Suas respostas devem ser afirmações, não questionamentos.`;
 
         return userPrompt;
     }
