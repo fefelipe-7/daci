@@ -26,8 +26,11 @@ class ContextBuilder {
      */
     getTemporalContext() {
         const now = new Date();
-        const hour = now.getHours();
-        const dayOfWeek = now.getDay();
+        
+        // Ajustar para o fuso horário de Brasília (America/Sao_Paulo)
+        const brasiliaTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+        const hour = brasiliaTime.getHours();
+        const dayOfWeek = brasiliaTime.getDay();
         const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
         
         // Determinar período do dia
