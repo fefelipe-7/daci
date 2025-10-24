@@ -196,6 +196,23 @@ EVITE:
             });
         }
 
+        // Adicionar memórias ativas (tópicos e preferências)
+        if (context.activeMemory) {
+            const { knownPreferences, recentTopics } = context.activeMemory;
+            
+            if (recentTopics && recentTopics.length > 0) {
+                userPrompt += `\n\nTópicos recentes de conversa: ${recentTopics.join(', ')}`;
+            }
+            
+            if (knownPreferences && knownPreferences.length > 0) {
+                userPrompt += `\n\nPreferências conhecidas sobre o usuário:`;
+                knownPreferences.forEach(pref => {
+                    const content = pref.content.substring(0, 80);
+                    userPrompt += `\n- ${content}`;
+                });
+            }
+        }
+
         // Adicionar contexto temporal
         if (context.temporal) {
             const { period, mood, isWeekend } = context.temporal;

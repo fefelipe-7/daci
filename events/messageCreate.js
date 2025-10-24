@@ -10,6 +10,7 @@ const UserPersonality = require('../models/UserPersonality');
 const UserNicknames = require('../core/UserNicknames');
 const logger = require('../core/Logger');
 const database = require('../database/database');
+const memoryManager = require('../core/MemoryManager');
 const fs = require('fs');
 const path = require('path');
 
@@ -103,12 +104,41 @@ module.exports = {
                 logger.info('message', '🔄 Usando arquitetura de 3 camadas');
                 
                 try {
+                    // 0. BUSCAR/CARREGAR MEMÓRIA ATIVA
+                    let activeContext = memoryManager.getActiveContext(message.author.id);
+                    
+                    if (!activeContext) {
+                        // Primeira interação ou contexto expirado - carregar de longo prazo
+                        const memories = memoryManager.getMemories(message.author.id, {
+                            limit: 5,
+                            minRelevance: 0.7
+                        });
+                        
+                        const recentTopics = memoryManager.getRecentTopics(message.author.id, 3);
+                        
+                        activeContext = {
+                            lastTopics: recentTopics.map(t => t.topic),
+                            knownPreferences: memories.filter(m => m.memory_type === 'preference'),
+                            conversationStart: Date.now(),
+                            messageCount: 0
+                        };
+                        
+                        logger.debug('memory', `Contexto criado para user ${message.author.id}`);
+                    }
+                    
+                    // Adicionar mensagem do usuário ao histórico
+                    memoryManager.addToHistory(message.author.id, {
+                        role: 'user',
+                        content: message.content
+                    }, message.guild?.id);
+                    
                     // 1. PREPROCESSAR
                     logger.debug('message', '1️⃣ Preprocessando...');
                     const pkg = await preprocessor.process(message, {
                         user: message.author,
                         channel: message.channel,
-                        guild: message.guild
+                        guild: message.guild,
+                        activeMemory: activeContext
                     });
                     
                     // 2. PROCESSAR (IA)
@@ -136,6 +166,40 @@ module.exports = {
                         logger.warn('message', `Usou fallback nível ${finalResponse.fallbackLevel}`);
                     } else {
                         logger.success('message', `Resposta gerada com sucesso (score: ${finalResponse.metrics.styleScore?.toFixed(2) || 'N/A'})`);
+                    }
+                    
+                    // 4. ATUALIZAR MEMÓRIA
+                    // Adicionar resposta do bot ao histórico
+                    memoryManager.addToHistory(message.author.id, {
+                        role: 'bot',
+                        content: resposta
+                    }, message.guild?.id);
+                    
+                    // Atualizar contexto ativo
+                    activeContext.lastMessage = message.content;
+                    activeContext.messageCount = (activeContext.messageCount || 0) + 1;
+                    activeContext.lastResponse = resposta;
+                    memoryManager.setActiveContext(message.author.id, activeContext);
+                    
+                    // Detectar e salvar preferências importantes
+                    const lowerContent = message.content.toLowerCase();
+                    const preferenceKeywords = ['gosto de', 'prefiro', 'amo', 'adoro', 'odeio', 'não gosto'];
+                    
+                    for (const keyword of preferenceKeywords) {
+                        if (lowerContent.includes(keyword)) {
+                            memoryManager.saveMemory({
+                                userId: message.author.id,
+                                guildId: message.guild?.id,
+                                type: 'preference',
+                                content: message.content,
+                                metadata: {
+                                    detectedKeyword: keyword,
+                                    timestamp: Date.now()
+                                }
+                            });
+                            logger.debug('memory', `Preferência detectada: "${keyword}"`);
+                            break;
+                        }
                     }
                     
                     // Log legado para compatibilidade

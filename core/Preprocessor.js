@@ -77,7 +77,9 @@ class Preprocessor {
                 context: {
                     temporal: context.temporal,
                     conversationActive: context.history?.length > 0
-                }
+                },
+                activeMemory: options.activeMemory || null,
+                recentTopics: options.activeMemory?.lastTopics || []
             };
             
             const processingTime = Date.now() - startTime;
