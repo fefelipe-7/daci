@@ -160,16 +160,16 @@ class Preprocessor {
     /**
      * Analisa se contexto está completo e válido
      */
-    validatePackage(package) {
-        if (!package.prompt || !package.prompt.system || !package.prompt.user) {
+    validatePackage(pkg) {
+        if (!pkg.prompt || !pkg.prompt.system || !pkg.prompt.user) {
             throw new Error('Prompt incompleto');
         }
         
-        if (!package.parameters || !package.parameters.temperature) {
+        if (!pkg.parameters || !pkg.parameters.temperature) {
             throw new Error('Parâmetros incompletos');
         }
         
-        if (!package.metadata || !package.metadata.userId) {
+        if (!pkg.metadata || !pkg.metadata.userId) {
             throw new Error('Metadata incompleta');
         }
         
@@ -179,15 +179,15 @@ class Preprocessor {
     /**
      * Gera resumo do pacote para debug
      */
-    summarize(package) {
+    summarize(pkg) {
         return {
-            user: package.metadata.username,
-            sentiment: package.metadata.sentiment.classification,
-            intensity: package.metadata.sentiment.intensity.toFixed(2),
-            personality: package.metadata.personality.tipoRelacao,
-            temperature: package.parameters.temperature,
-            historySize: package.metadata.context.conversationActive ? 'yes' : 'no',
-            promptLength: package.prompt.system.length + package.prompt.user.length
+            user: pkg.metadata.username,
+            sentiment: pkg.metadata.sentiment.classification,
+            intensity: pkg.metadata.sentiment.intensity.toFixed(2),
+            personality: pkg.metadata.personality.tipoRelacao,
+            temperature: pkg.parameters.temperature,
+            historySize: pkg.metadata.context.conversationActive ? 'yes' : 'no',
+            promptLength: pkg.prompt.system.length + pkg.prompt.user.length
         };
     }
 }

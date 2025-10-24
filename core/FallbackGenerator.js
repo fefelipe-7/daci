@@ -9,33 +9,33 @@ class FallbackGenerator {
     /**
      * Gera fallback apropriado baseado no nível e contexto
      */
-    static generate(level, package) {
+    static generate(level, pkg) {
         switch (level) {
             case 1:
-                return this.level1_PersonalizedTemplates(package);
+                return this.level1_PersonalizedTemplates(pkg);
             case 2:
-                return this.level2_ContextualGeneric(package);
+                return this.level2_ContextualGeneric(pkg);
             case 3:
             default:
-                return this.level3_Emergency(package);
+                return this.level3_Emergency(pkg);
         }
     }
     
     /**
      * Nível 1: Templates Personalizados (usa ResponseBuilder)
      */
-    static level1_PersonalizedTemplates(package) {
+    static level1_PersonalizedTemplates(pkg) {
         try {
-            const { metadata } = package;
+            const { metadata } = pkg;
             const { personality, sentiment } = metadata;
             
             if (!personality || !sentiment) {
-                return this.level2_ContextualGeneric(package);
+                return this.level2_ContextualGeneric(pkg);
             }
             
             // Usar ResponseBuilder existente para gerar resposta baseada em personalidade
             const response = ResponseBuilder.gerarRespostaTemplate(
-                package.prompt.user,
+                pkg.prompt.user,
                 personality.parametrosFinais,
                 personality.estiloResposta,
                 metadata.username,
@@ -49,15 +49,15 @@ class FallbackGenerator {
             };
             
         } catch (error) {
-            return this.level2_ContextualGeneric(package);
+            return this.level2_ContextualGeneric(pkg);
         }
     }
     
     /**
      * Nível 2: Templates Genéricos Contextuais
      */
-    static level2_ContextualGeneric(package) {
-        const { metadata, prompt } = package;
+    static level2_ContextualGeneric(pkg) {
+        const { metadata, prompt } = pkg;
         const messageType = this.detectMessageType(prompt.user);
         
         const templates = {
@@ -107,7 +107,7 @@ class FallbackGenerator {
     /**
      * Nível 3: Fallback de Emergência
      */
-    static level3_Emergency(package) {
+    static level3_Emergency(pkg) {
         const emergency = [
             'pô, deu um bug aqui',
             'eita, travou tudo',

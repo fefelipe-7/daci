@@ -25,7 +25,7 @@ class Processor {
     /**
      * Processa pacote do Preprocessor e executa chamada à IA
      */
-    async process(package) {
+    async process(pkg) {
         const startTime = Date.now();
         
         // Selecionar melhor modelo disponível
@@ -34,7 +34,7 @@ class Processor {
         
         try {
             // Executar chamada à IA com fallback automático de modelos
-            const response = await this.executeWithFallback(package, model);
+            const response = await this.executeWithFallback(pkg, model);
             
             // Coletar métricas
             const metrics = {
@@ -48,7 +48,7 @@ class Processor {
             
             return {
                 content: response.content,
-                metadata: package.metadata,
+                metadata: pkg.metadata,
                 metrics,
                 model: model.name
             };
@@ -75,7 +75,7 @@ class Processor {
     /**
      * Executa chamada com fallback automático entre modelos
      */
-    async executeWithFallback(package, initialModel, maxAttempts = 3) {
+    async executeWithFallback(pkg, initialModel, maxAttempts = 3) {
         let currentModel = initialModel;
         let attempts = 0;
 
@@ -83,7 +83,7 @@ class Processor {
             attempts++;
 
             try {
-                const response = await this.callOpenRouter(package, currentModel);
+                const response = await this.callOpenRouter(pkg, currentModel);
                 
                 // Registrar uso bem-sucedido
                 this.modelManager.recordModelUsage(currentModel.name, true);
@@ -113,24 +113,24 @@ class Processor {
     /**
      * Faz chamada para OpenRouter API
      */
-    async callOpenRouter(package, model) {
+    async callOpenRouter(pkg, model) {
         const requestBody = {
             model: model.name,
             messages: [
                 {
                     role: 'system',
-                    content: package.prompt.system
+                    content: pkg.prompt.system
                 },
                 {
                     role: 'user',
-                    content: package.prompt.user
+                    content: pkg.prompt.user
                 }
             ],
-            temperature: package.parameters.temperature || model.temperature,
-            max_tokens: package.parameters.maxTokens || model.maxTokens,
-            top_p: package.parameters.topP || 0.9,
-            frequency_penalty: package.parameters.frequencyPenalty || 0.5,
-            presence_penalty: package.parameters.presencePenalty || 0.5
+            temperature: pkg.parameters.temperature || model.temperature,
+            max_tokens: pkg.parameters.maxTokens || model.maxTokens,
+            top_p: pkg.parameters.topP || 0.9,
+            frequency_penalty: pkg.parameters.frequencyPenalty || 0.5,
+            presence_penalty: pkg.parameters.presencePenalty || 0.5
         };
 
         const response = await fetch(this.baseURL, {

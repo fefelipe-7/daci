@@ -20,7 +20,7 @@ class Postprocessor {
     /**
      * Processa resposta bruta e retorna resposta final validada
      */
-    async process(rawResponse, originalPackage) {
+    async process(rawResponse, originalPkg) {
         const startTime = Date.now();
         let fallbackLevel = 0;
         let content = null;
@@ -30,7 +30,7 @@ class Postprocessor {
             // Se rawResponse é null, ir direto para fallback nível 1
             if (!rawResponse || !rawResponse.content) {
                 logger.warn('postprocessor', 'Resposta bruta vazia, usando fallback nível 1');
-                return await this.handleFallback(1, originalPackage, metrics);
+                return await this.handleFallback(1, originalPkg, metrics);
             }
             
             content = rawResponse.content;
@@ -39,7 +39,7 @@ class Postprocessor {
             // 1. Validação básica
             if (!ResponseValidator.isValid(content)) {
                 logger.warn('postprocessor', 'Resposta inválida, usando fallback nível 1');
-                return await this.handleFallback(1, originalPackage, metrics);
+                return await this.handleFallback(1, originalPkg, metrics);
             }
             
             // 2. Analisar estilo
@@ -56,12 +56,12 @@ class Postprocessor {
             }
             
             // 4. Aplicar transformações finais
-            content = this.applyFinalTransformations(content, originalPackage);
+            content = this.applyFinalTransformations(content, originalPkg);
             
             // 5. Validação final
             if (!ResponseValidator.isSafe(content)) {
                 logger.warn('postprocessor', 'Resposta não passou validação de segurança, usando fallback nível 2');
-                return await this.handleFallback(2, originalPackage, metrics);
+                return await this.handleFallback(2, originalPkg, metrics);
             }
             
             // 6. Calcular qualidade
@@ -70,8 +70,8 @@ class Postprocessor {
             
             // 7. Registrar logs
             await this.logInteraction({
-                ...originalPackage.metadata,
-                input: originalPackage.prompt.user,
+                ...originalPkg.metadata,
+                input: originalPkg.prompt.user,
                 output: content,
                 model: rawResponse.model,
                 responseTime: metrics.responseTime || 0,
@@ -99,21 +99,21 @@ class Postprocessor {
             
         } catch (error) {
             logger.error('postprocessor', 'Erro no pós-processamento', error);
-            return await this.handleFallback(2, originalPackage, metrics);
+            return await this.handleFallback(2, originalPkg, metrics);
         }
     }
     
     /**
      * Aplica transformações finais para garantir estilo Daci
      */
-    applyFinalTransformations(content, package) {
+    applyFinalTransformations(content, pkg) {
         let result = content;
         
         // 1. SEMPRE converter para minúsculo (estilo Daci)
         result = result.toLowerCase();
         
         // 2. Adicionar emojis contextuais (moderadamente)
-        result = this.addContextualEmojis(result, package);
+        result = this.addContextualEmojis(result, pkg);
         
         // 3. Garantir que não está muito longo
         result = this.limitLength(result, 500);
@@ -127,14 +127,14 @@ class Postprocessor {
     /**
      * Adiciona emojis contextuais baseados no sentimento
      */
-    addContextualEmojis(content, package) {
+    addContextualEmojis(content, pkg) {
         // Não adicionar emojis se já tem muitos
         const emojiCount = (content.match(/[\u{1F300}-\u{1F9FF}]/gu) || []).length;
         if (emojiCount >= 2) {
             return content;
         }
         
-        const { sentiment } = package.metadata;
+        const { sentiment } = pkg.metadata;
         if (!sentiment) {
             return content;
         }
@@ -187,15 +187,15 @@ class Postprocessor {
     /**
      * Manipula fallback em diferentes níveis
      */
-    async handleFallback(level, package, metrics) {
+    async handleFallback(level, pkg, metrics) {
         logger.warn('postprocessor', `Usando fallback nível ${level}`);
         
-        const fallback = FallbackGenerator.generate(level, package);
+        const fallback = FallbackGenerator.generate(level, pkg);
         
         // Registrar falha
         await this.logInteraction({
-            ...package.metadata,
-            input: package.prompt.user,
+            ...pkg.metadata,
+            input: pkg.prompt.user,
             output: fallback.content,
             model: metrics.model || 'fallback',
             responseTime: metrics.responseTime || 0,

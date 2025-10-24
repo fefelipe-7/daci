@@ -105,7 +105,7 @@ module.exports = {
                 try {
                     // 1. PREPROCESSAR
                     logger.debug('message', '1️⃣ Preprocessando...');
-                    const package = await preprocessor.process(message, {
+                    const pkg = await preprocessor.process(message, {
                         user: message.author,
                         channel: message.channel,
                         guild: message.guild
@@ -116,8 +116,8 @@ module.exports = {
                     let rawResponse = null;
                     
                     try {
-                        logger.aiRequest(apelidoDetectado, package.prompt.user.substring(0, 100), 'auto-select');
-                        rawResponse = await processor.process(package);
+                        logger.aiRequest(apelidoDetectado, pkg.prompt.user.substring(0, 100), 'auto-select');
+                        rawResponse = await processor.process(pkg);
                         logger.aiResponse(apelidoDetectado, rawResponse.metrics.responseTime, true);
                     } catch (error) {
                         logger.warn('message', `IA falhou: ${error.message}`);
@@ -127,7 +127,7 @@ module.exports = {
                     
                     // 3. POSTPROCESSAR
                     logger.debug('message', '3️⃣ Postprocessando...');
-                    finalResponse = await postprocessor.process(rawResponse, package);
+                    finalResponse = await postprocessor.process(rawResponse, pkg);
                     
                     resposta = finalResponse.content;
                     
@@ -139,11 +139,11 @@ module.exports = {
                     }
                     
                     // Log legado para compatibilidade
-                    const personality = package.metadata.personality;
+                    const personality = pkg.metadata.personality;
                     logInteractionLegacy(
                         message.author.id,
                         message.author.username,
-                        package.prompt.user,
+                        pkg.prompt.user,
                         resposta,
                         personality.parametrosFinais,
                         personality.estiloResposta
