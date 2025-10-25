@@ -278,7 +278,7 @@ process.on('SIGINT', async () => {
     console.log('\n⏹️ Encerrando bot...');
     
     try {
-        const memoryManager = require('./core/MemoryManager');
+        const memoryManager = require('./core/memory/MemoryManager'); // Refatorado
         await memoryManager.shutdown();
     } catch (error) {
         console.error('Erro ao salvar memória:', error.message);
@@ -291,7 +291,7 @@ process.on('SIGTERM', async () => {
     console.log('\n⏹️ Sinal SIGTERM recebido, encerrando...');
     
     try {
-        const memoryManager = require('./core/MemoryManager');
+        const memoryManager = require('./core/memory/MemoryManager'); // Refatorado
         await memoryManager.shutdown();
     } catch (error) {
         console.error('Erro ao salvar memória:', error.message);

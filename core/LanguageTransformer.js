@@ -5,7 +5,7 @@
  * Aplica abreviações, alongamentos, emojis e naturalidade
  */
 
-const { ABREVIACOES, EMOJIS, ALONGAMENTOS, RISADAS } = require('./DaciPersonality');
+const { ABREVIACOES, EMOJIS, ALONGAMENTOS, RISADAS } = require('./personality/DaciPersonality'); // Refatorado
 
 class LanguageTransformer {
     

@@ -10,7 +10,7 @@ const UserPersonality = require('../models/UserPersonality');
 const UserNicknames = require('../core/UserNicknames');
 const logger = require('../core/Logger');
 const database = require('../database/database');
-const memoryManager = require('../core/MemoryManager');
+const memoryManager = require('../core/memory/MemoryManager'); // Refatorado
 const fs = require('fs');
 const path = require('path');
 
@@ -237,7 +237,7 @@ module.exports = {
                 // FALLBACK: USAR SISTEMA LEGADO SE CAMADAS NÃO DISPONÍVEIS
                 logger.warn('message', '⚠️ Camadas não disponíveis, usando sistema legado');
                 
-                const ResponseBuilder = require('../core/ResponseBuilder');
+                const ResponseBuilder = require('../core/response/ResponseBuilder'); // Refatorado
                 const PersonalityEngine = require('../core/PersonalityEngine');
                 
                 // Carregar perfil

@@ -6,7 +6,7 @@
 
 // Importar fetch (usa global do Node.js 18+ ou fallback para node-fetch v2)
 const fetch = global.fetch || require('node-fetch');
-const ModelManager = require('./ModelManager.js');
+const ModelManager = require('./models/ModelManager');
 const logger = require('./Logger.js');
 
 class Processor {

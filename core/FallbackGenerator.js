@@ -3,7 +3,7 @@
  * Garante que bot sempre responda algo coerente
  */
 
-const ResponseBuilder = require('./ResponseBuilder');
+const ResponseBuilder = require('./response/ResponseBuilder'); // Refatorado
 
 class FallbackGenerator {
     /**

@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const memoryManager = require('../../core/MemoryManager');
+const memoryManager = require('../../core/memory/MemoryManager'); // Refatorado
 
 module.exports = {
     data: new SlashCommandBuilder()

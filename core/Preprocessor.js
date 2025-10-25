@@ -5,7 +5,7 @@
 
 const UserPersonality = require('../models/UserPersonality');
 const PersonalityEngine = require('./PersonalityEngine');
-const PromptBuilder = require('./PromptBuilder');
+const PromptBuilder = require('./prompt/PromptBuilder'); // Refatorado
 const ContextBuilder = require('./ContextBuilder');
 const SentimentAnalyzer = require('./SentimentAnalyzer');
 const IntentDetector = require('./IntentDetector');
@@ -257,7 +257,7 @@ class Preprocessor {
      * @returns {Array} Histórico mesclado
      */
     async buildHybridHistory(user, discordHistory = [], activeMemory = null) {
-        const memoryManager = require('./MemoryManager');
+        const memoryManager = require('./memory/MemoryManager'); // Refatorado
         
         // 1. Buscar histórico do MemoryManager (conversas user-bot)
         const memoryHistory = activeMemory 
