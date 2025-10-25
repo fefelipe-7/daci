@@ -14,6 +14,12 @@ const fs = require('fs');
 const logger = require('./Logger');
 const natural = require('natural');
 
+// Novos componentes de contexto inteligente
+const ContextTracker = require('./ContextTracker');
+const EntityRecognizer = require('./EntityRecognizer');
+const TopicDecay = require('./TopicDecay');
+const ConversationThreading = require('./ConversationThreading');
+
 class MemoryManager {
     constructor() {
         // ===== MEMÓRIA DE CURTO PRAZO (RAM) =====
@@ -23,6 +29,11 @@ class MemoryManager {
         // ===== LOCKS PARA PREVENIR RACE CONDITIONS =====
         this.consolidationLocks = new Map(); // { userId: boolean }
         this.processingLocks = new Map(); // { userId: Promise }
+        
+        // ===== NOVOS SISTEMAS DE CONTEXTO INTELIGENTE =====
+        this.contextTracker = new ContextTracker();
+        this.entityRecognizer = new EntityRecognizer();
+        this.conversationThreading = new ConversationThreading();
         
         // ===== MEMÓRIA DE LONGO PRAZO (SQLite) =====
         const dbDir = path.join(__dirname, '..', 'database');
@@ -104,20 +115,34 @@ class MemoryManager {
      * @returns {Object|null} Contexto ou null se expirado
      */
     getActiveContext(userId) {
-        const context = this.activeContexts.get(userId);
+        // Usar ContextTracker para obter estado inteligente
+        const trackerState = this.contextTracker.getActiveState(userId);
+        const threadSummary = this.conversationThreading.getThreadSummary(userId);
         
-        if (!context) {
-            return null;
+        // Fallback para sistema antigo se ContextTracker não tem dados
+        if (!trackerState) {
+            const context = this.activeContexts.get(userId);
+            
+            if (!context) {
+                return null;
+            }
+            
+            // Verificar se expirou
+            if (Date.now() > context.expiresAt) {
+                this.activeContexts.delete(userId);
+                logger.debug('memory', `Contexto expirado para user ${userId}`);
+                return null;
+            }
+            
+            return context.data;
         }
         
-        // Verificar se expirou
-        if (Date.now() > context.expiresAt) {
-            this.activeContexts.delete(userId);
-            logger.debug('memory', `Contexto expirado para user ${userId}`);
-            return null;
-        }
-        
-        return context.data;
+        // Retornar contexto enriquecido com threading
+        return {
+            ...trackerState,
+            thread: threadSummary,
+            lastTopics: this.getRecentTopics(userId, 5)
+        };
     }
     
     /**
@@ -150,14 +175,46 @@ class MemoryManager {
         }
         
         const history = this.conversationHistory.get(userId);
-        history.push({
+        const enhancedMessage = {
             ...message,
             timestamp: Date.now()
-        });
+        };
+        
+        // NOVO: Extrair entidades da mensagem em tempo real
+        if (message.role === 'user' && message.content) {
+            const entities = this.entityRecognizer.extractEntities(message.content, userId);
+            enhancedMessage.entities = entities;
+            
+            // Atualizar ContextTracker com entidades detectadas
+            if (this.entityRecognizer.hasSignificantEntities(entities)) {
+                const topico = this.inferTopic(entities, message.content);
+                this.contextTracker.updateContext(userId, {
+                    entidades_ativas: entities,
+                    topico_ativo: topico,
+                    ultimo_assunto: message.content.substring(0, 100)
+                });
+            }
+        }
+        
+        history.push(enhancedMessage);
         
         // Limitar tamanho do histórico (FIFO)
         if (history.length > this.MAX_HISTORY_SIZE) {
             history.shift();
+        }
+        
+        // NOVO: Atualizar threading se temos user + bot messages
+        if (message.role === 'bot') {
+            const userMessages = history.filter(m => m.role === 'user');
+            const lastUserMsg = userMessages[userMessages.length - 1];
+            if (lastUserMsg) {
+                this.conversationThreading.addTurn(
+                    userId,
+                    lastUserMsg.content,
+                    message.content,
+                    { topic: this.contextTracker.getActiveState(userId)?.topico_ativo }
+                );
+            }
         }
         
         // Verificar se deve consolidar (COM LOCK para evitar race condition)
@@ -547,12 +604,52 @@ class MemoryManager {
      * @returns {Array} Lista de tópicos
      */
     getRecentTopics(userId, limit = 5) {
-        return this.db.prepare(`
+        const topics = this.db.prepare(`
             SELECT * FROM conversation_topics 
             WHERE user_id = ? 
             ORDER BY ended_at DESC 
             LIMIT ?
-        `).all(userId, limit);
+        `).all(userId, limit * 2); // Buscar mais para filtrar por relevância
+        
+        // NOVO: Aplicar TopicDecay e filtrar por relevância
+        const relevantTopics = TopicDecay.filterRelevantTopics(topics, 0.3);
+        const rankedTopics = TopicDecay.rankTopics(relevantTopics);
+        
+        return rankedTopics.slice(0, limit);
+    }
+    
+    /**
+     * Infere tópico principal baseado em entidades detectadas
+     * @param {Object} entities - Entidades detectadas
+     * @param {string} messageContent - Conteúdo da mensagem
+     * @returns {string} Tópico inferido
+     */
+    inferTopic(entities, messageContent) {
+        // Prioridade: pessoas > eventos > objetos > lugares
+        if (entities.pessoas && entities.pessoas.length > 0) {
+            const pessoa = entities.pessoas[0];
+            if (entities.eventos && entities.eventos.length > 0) {
+                return `${entities.eventos[0].tipo} com ${pessoa}`;
+            }
+            return `conversa sobre ${pessoa}`;
+        }
+        
+        if (entities.eventos && entities.eventos.length > 0) {
+            const evento = entities.eventos[0];
+            return evento.tipo + (evento.de ? ` de ${evento.de}` : '');
+        }
+        
+        if (entities.objetos && entities.objetos.length > 0) {
+            return entities.objetos[0];
+        }
+        
+        if (entities.lugares && entities.lugares.length > 0) {
+            return `ida para ${entities.lugares[0]}`;
+        }
+        
+        // Fallback: primeiras palavras da mensagem
+        const words = messageContent.toLowerCase().split(' ').slice(0, 3);
+        return words.join(' ');
     }
     
     // ========================================================================

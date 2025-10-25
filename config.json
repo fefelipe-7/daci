@@ -11,12 +11,6 @@
       "logActions": true,
       "autoModeration": false
     },
-    "gacha": {
-      "enabled": true,
-      "maxInventorySize": 100,
-      "dailyRolls": 5,
-      "premiumRolls": 10
-    },
     "fun": {
       "enabled": true,
       "autoReactions": true,
