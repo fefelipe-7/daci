@@ -129,8 +129,8 @@ class Processor {
             temperature: pkg.parameters.temperature || model.temperature,
             max_tokens: pkg.parameters.maxTokens || model.maxTokens,
             top_p: pkg.parameters.topP || 0.9,
-            frequency_penalty: pkg.parameters.frequencyPenalty || 0.5,
-            presence_penalty: pkg.parameters.presencePenalty || 0.5
+            frequency_penalty: pkg.parameters.frequencyPenalty || 0.9,  // Aumentado de 0.5 para 0.9 (reduz palavras inventadas)
+            presence_penalty: pkg.parameters.presencePenalty || 0.7     // Aumentado de 0.5 para 0.7 (mantém no contexto)
         };
 
         const response = await fetch(this.baseURL, {

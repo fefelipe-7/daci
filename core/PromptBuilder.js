@@ -23,7 +23,7 @@ class PromptBuilder {
             system: systemPrompt + '\n\n' + styleGuide,
             user: userContext,
             temperature: this.calculateTemperature(userProfile),
-            maxTokens: 768 // Respostas naturais e contextuais
+            maxTokens: 400 // Respostas curtas e coerentes (reduzido de 768)
         };
     }
 
@@ -155,18 +155,32 @@ COMO VOCÊ FALA:
             guide += `\n- EVITE sarcasmo ou ironia - seja genuíno`;
         }
 
-        guide += `\n\nEXEMPLOS DE RESPOSTAS BOAS:
+        guide += `\n\nEXEMPLOS DE RESPOSTAS BOAS (curtas e naturais):
 - "opa, fala aí"
 - "massa demais isso"
 - "caraca, não sabia não"
 - "nem me fala, aconteceu isso comigo também"
 - "aí sim hein"
+- "pô, que dahora"
+- "real, concordo demais"
+- "n sabia disso n"
+- "pode crer, faz sentido"
+- "tmj mano"
 
 EVITE:
-- Respostas longas demais
+- Respostas longas demais (máximo 2-3 frases)
+- Inventar palavras ou gírias que não existem
 - Ser formal ou corporativo
 - Usar "olá", "como posso ajudar" (muito genérico)
-- Explicações desnecessárias`;
+- Explicações desnecessárias
+- Repetir as mesmas expressões várias vezes
+
+⚠️ REGRAS IMPORTANTES:
+- Use APENAS português real brasileiro - NÃO invente palavras
+- Se não souber algo, seja honesto ("não sei" ou "não lembro")
+- Respostas curtas e diretas (máximo 2-3 frases)
+- Mantenha-se no contexto da conversa - não mude de assunto sozinho
+- Não repita as mesmas palavras ou expressões múltiplas vezes`;
 
         return guide;
     }
@@ -272,7 +286,7 @@ Responda agora como Daci, de forma natural e contextual:`;
      */
     calculateTemperature(userProfile) {
         if (!userProfile || !userProfile.parametros) {
-            return 0.7; // Padrão
+            return 0.65; // Padrão reduzido para mais coerência
         }
 
         const params = userProfile.parametros;
@@ -282,10 +296,10 @@ Responda agora como Daci, de forma natural e contextual:`;
         const creativity = params.criatividade || 0.5;
         const spontaneity = params.espontaneidade || 0.5;
         
-        const temperature = 0.5 + (creativity * 0.3) + (spontaneity * 0.2);
+        const temperature = 0.4 + (creativity * 0.2) + (spontaneity * 0.15);
         
-        // Manter entre 0.6 e 0.9
-        return Math.max(0.6, Math.min(0.9, temperature));
+        // Manter entre 0.55 e 0.75 (REDUZIDO para evitar alucinações)
+        return Math.max(0.55, Math.min(0.75, temperature));
     }
 
     /**
