@@ -4,7 +4,7 @@
  */
 
 const nlp = require('compromise');
-require('compromise-numbers')(nlp);
+nlp.extend(require('compromise-numbers'));
 const logger = require('./Logger');
 
 class EntityRecognizer {
