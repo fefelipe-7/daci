@@ -5,6 +5,8 @@ Um bot completo e modular para Discord com **sistema de personalidades dinâmica
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D16.9.0-brightgreen)](https://nodejs.org/)
 [![Discord.js](https://img.shields.io/badge/discord.js-v14-blue)](https://discord.js.org/)
+[![Code of Conduct](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
+[![Security Policy](https://img.shields.io/badge/Security-Policy-red.svg)](SECURITY.md)
 
 ## ✨ Funcionalidades Principais
 
@@ -308,6 +310,18 @@ Contribuições são bem-vindas! Por favor:
 4. Push para a branch (`git push origin feature/NovaFeature`)
 5. Abra um Pull Request
 
+**Leia nosso [Guia de Contribuição](CONTRIBUTING.md) e [Código de Conduta](CODE_OF_CONDUCT.md)** antes de contribuir.
+
+## 🔒 Segurança
+
+A segurança é uma prioridade. Se você descobrir uma vulnerabilidade:
+
+- **NÃO** abra uma issue pública
+- Reporte de forma privada seguindo nossa [Política de Segurança](SECURITY.md)
+- Aguarde a confirmação da equipe antes de divulgar publicamente
+
+Para mais informações sobre práticas de segurança, consulte [SECURITY.md](SECURITY.md).
+
 ## 📝 Licença
 
 Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
@@ -322,8 +336,16 @@ Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para ma
 - Todos os contribuidores do projeto
 - Usuários e testadores do bot
 
+## 📚 Documentação Adicional
+
+- 📖 [Guia de Contribuição](CONTRIBUTING.md) - Como contribuir para o projeto
+- 📜 [Código de Conduta](CODE_OF_CONDUCT.md) - Nossas diretrizes de comunidade
+- 🔒 [Política de Segurança](SECURITY.md) - Como reportar vulnerabilidades
+- 📝 [Changelog](CHANGELOG.md) - Histórico de versões e mudanças
+- 🚀 [Guia de Deploy](DEPLOY_GITHUB.md) - Deploy no Render via GitHub
+
 ---
 
 **Desenvolvido com ❤️ para criar a melhor experiência em servidores Discord!**
 
-Para suporte, dúvidas ou sugestões, abra uma [issue](https://github.com/seu-usuario/daci-discord-bot/issues) no GitHub.
+Para suporte, dúvidas ou sugestões, abra uma [issue](https://github.com/fefelipe-7/daci/issues) no GitHub.
