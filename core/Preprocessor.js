@@ -16,7 +16,11 @@ class Preprocessor {
         this.contextBuilder = new ContextBuilder();
         this.sentimentAnalyzer = new SentimentAnalyzer();
         
-        logger.info('preprocessor', 'Preprocessor inicializado');
+        // Cache de perfis de usuário (performance)
+        this.profileCache = new Map(); // { userId_guildId: {profile, expiresAt} }
+        this.CACHE_TTL = 10 * 60 * 1000; // 10 minutos
+        
+        logger.info('preprocessor', 'Preprocessor inicializado (com cache)');
     }
     
     /**
@@ -106,11 +110,30 @@ class Preprocessor {
     }
     
     /**
-     * Carrega perfil do usuário
+     * Carrega perfil do usuário (COM CACHE para performance)
      */
     loadUserProfile(userId, guildId) {
+        const cacheKey = `${userId}_${guildId || 'no-guild'}`;
+        const cached = this.profileCache.get(cacheKey);
+        
+        // Verificar se está no cache e não expirou
+        if (cached && Date.now() < cached.expiresAt) {
+            logger.debug('preprocessor', `Usando perfil em cache para ${userId}`);
+            return cached.profile;
+        }
+        
+        // Não está no cache ou expirou, buscar do banco
         try {
-            return UserPersonality.get(userId, guildId);
+            const profile = UserPersonality.get(userId, guildId);
+            
+            // Armazenar no cache
+            this.profileCache.set(cacheKey, {
+                profile,
+                expiresAt: Date.now() + this.CACHE_TTL
+            });
+            
+            logger.debug('preprocessor', `Perfil carregado e cacheado para ${userId}`);
+            return profile;
         } catch (error) {
             logger.warn('preprocessor', `Erro ao carregar perfil de ${userId}, usando padrão`);
             return UserPersonality.get(userId, guildId); // Retorna perfil padrão
