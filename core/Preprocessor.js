@@ -8,6 +8,7 @@ const PersonalityEngine = require('./PersonalityEngine');
 const PromptBuilder = require('./PromptBuilder');
 const ContextBuilder = require('./ContextBuilder');
 const SentimentAnalyzer = require('./SentimentAnalyzer');
+const IntentDetector = require('./IntentDetector');
 const logger = require('./Logger');
 
 class Preprocessor {
@@ -56,6 +57,10 @@ class Preprocessor {
             // 4. Limpar mensagem
             const cleanMessage = this.cleanMessage(message.content);
             
+            // 4.5. Detectar intenção da mensagem
+            const intent = IntentDetector.detect(cleanMessage, context.history);
+            logger.debug('preprocessor', `Intent detectado: ${intent.intent} (confiança: ${intent.confidence.toFixed(2)})`);
+            
             // 5. Analisar sentimento
             const sentiment = this.sentimentAnalyzer.analyze(cleanMessage);
             
@@ -86,6 +91,7 @@ class Preprocessor {
                 timestamp: Date.now(),
                 personality,
                 sentiment,
+                intent, // Intenção detectada
                 context: {
                     temporal: context.temporal,
                     conversationActive: context.history?.length > 0

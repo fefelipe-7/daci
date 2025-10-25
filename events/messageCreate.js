@@ -142,6 +142,20 @@ module.exports = {
                         activeMemory: activeContext
                     });
                     
+                    // 1.5. VERIFICAR SE DEVE LIMPAR CONTEXTO BASEADO NO INTENT
+                    const IntentDetector = require('../core/IntentDetector');
+                    if (pkg.metadata.intent && IntentDetector.shouldClearContext(pkg.metadata.intent)) {
+                        logger.info('message', `🧹 Limpando contexto (intent: ${pkg.metadata.intent.intent})`);
+                        memoryManager.clearContext(message.author.id);
+                        // Recriar contexto vazio para esta nova conversa
+                        activeContext = {
+                            lastTopics: [],
+                            knownPreferences: [],
+                            conversationStart: Date.now(),
+                            messageCount: 0
+                        };
+                    }
+                    
                     // 2. PROCESSAR (IA)
                     logger.debug('message', '2️⃣ Processando com IA...');
                     let rawResponse = null;

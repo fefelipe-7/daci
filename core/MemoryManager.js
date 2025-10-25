@@ -12,6 +12,7 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 const logger = require('./Logger');
+const natural = require('natural');
 
 class MemoryManager {
     constructor() {
@@ -256,23 +257,71 @@ class MemoryManager {
     }
     
     /**
-     * Extrair tópicos relevantes do histórico
+     * Extrair tópicos relevantes do histórico (AVANÇADO: stemming + sinônimos + NER)
      * @param {Array} history - Histórico de mensagens
      * @returns {Array<string>} Lista de tópicos
      */
     extractTopics(history) {
         const topics = new Set();
-        const keywords = [
-            'meme', 'música', 'jogo', 'anime', 'série', 'filme',
-            'comida', 'trabalho', 'estudo', 'família', 'amigo',
-            'pizza', 'festa', 'rolê', 'zoeira', 'mina', 'mano'
-        ];
+        const stemmer = natural.PorterStemmerPt; // Stemmer português
+        
+        // Mapa de sinônimos expandido
+        const synonymMap = {
+            'jogo': ['game', 'jogar', 'jogos', 'gameplay', 'gamer', 'zerou', 'jogando'],
+            'filme': ['cinema', 'movie', 'filmes', 'assistir'],
+            'música': ['musica', 'som', 'song', 'banda', 'cantor', 'cantora', 'ouvindo'],
+            'meme': ['memes', 'zueira', 'zoeira', 'engraçado', 'piada'],
+            'comida': ['comer', 'pizza', 'hamburguer', 'lanche', 'jantar', 'almoço', 'comendo'],
+            'anime': ['animes', 'mangá', 'manga', 'otaku'],
+            'série': ['series', 'netflix', 'serie', 'episódio'],
+            'trabalho': ['trampo', 'emprego', 'chefe', 'empresa', 'trabalhando'],
+            'estudo': ['estudar', 'prova', 'faculdade', 'escola', 'aula', 'estudando'],
+            'festa': ['balada', 'rolê', 'role', 'sair', 'festinha'],
+            'amigo': ['amigos', 'mano', 'parça', 'truta', 'brother', 'galera'],
+            'família': ['familia', 'mãe', 'mae', 'pai', 'irmão', 'irmao']
+        };
+        
+        // Tokenizer para detectar palavras
+        const tokenizer = new natural.WordTokenizer();
         
         history.forEach(msg => {
             const content = msg.content.toLowerCase();
-            keywords.forEach(keyword => {
-                if (content.includes(keyword)) {
-                    topics.add(keyword);
+            const tokens = tokenizer.tokenize(content);
+            
+            if (!tokens) return;
+            
+            // 1. Buscar por sinônimos
+            Object.keys(synonymMap).forEach(mainTopic => {
+                const synonyms = synonymMap[mainTopic];
+                
+                // Verificar se algum sinônimo aparece
+                const found = synonyms.some(syn => content.includes(syn)) || content.includes(mainTopic);
+                
+                if (found) {
+                    topics.add(mainTopic);
+                }
+            });
+            
+            // 2. Detecção de entidades nomeadas (NER básico - nomes próprios)
+            tokens.forEach(token => {
+                // Detectar palavras com primeira letra maiúscula (possível nome próprio)
+                if (/^[A-Z][a-z]+/.test(token)) {
+                    // Verificar se é um nome conhecido de jogo, filme, etc
+                    const entities = {
+                        games: ['Zelda', 'Mario', 'Minecraft', 'Fortnite', 'LOL', 'CS', 'Valorant'],
+                        movies: ['Avengers', 'Star', 'Harry', 'Potter'],
+                        animes: ['Naruto', 'One', 'Piece', 'Dragon', 'Ball', 'Attack', 'Titan']
+                    };
+                    
+                    if (entities.games.some(g => token.includes(g))) {
+                        topics.add('jogo');
+                    }
+                    if (entities.movies.some(m => token.includes(m))) {
+                        topics.add('filme');
+                    }
+                    if (entities.animes.some(a => token.includes(a))) {
+                        topics.add('anime');
+                    }
                 }
             });
         });
@@ -377,45 +426,88 @@ class MemoryManager {
     }
     
     /**
-     * Calcular score de relevância baseado em conteúdo e tipo
+     * Calcular score de relevância AVANÇADO (TF-IDF + decay temporal + frequência)
      * @param {string} content - Conteúdo da memória
      * @param {string} type - Tipo de memória
+     * @param {Object} metadata - Metadados da memória
      * @returns {number} Score de 0.0 a 1.0
      */
-    calculateRelevance(content, type) {
+    calculateRelevance(content, type, metadata = {}) {
         let score = 0.5; // Base
         const lowerContent = content.toLowerCase();
         
-        // Preferências explícitas
+        // ===== 1. ANÁLISE SEMÂNTICA (TF-IDF simplificado) =====
+        const tokenizer = new natural.WordTokenizer();
+        const tokens = tokenizer.tokenize(lowerContent) || [];
+        const tfidf = new natural.TfIdf();
+        tfidf.addDocument(tokens);
+        
+        // Palavras-chave importantes recebem peso maior
+        const importantKeywords = {
+            preferences: ['gosto', 'amo', 'prefiro', 'adoro', 'curto', 'odeio', 'não gosto'],
+            emotions: ['feliz', 'triste', 'ansioso', 'empolgado', 'chateado'],
+            personal: ['meu', 'minha', 'meus', 'minhas', 'sou', 'tenho']
+        };
+        
+        // Contar ocorrências de palavras importantes
+        let importanceBonus = 0;
+        Object.values(importantKeywords).flat().forEach(keyword => {
+            if (lowerContent.includes(keyword)) {
+                importanceBonus += 0.05;
+            }
+        });
+        
+        score += Math.min(importanceBonus, 0.3); // Máximo +0.3
+        
+        // ===== 2. PREFERÊNCIAS EXPLÍCITAS =====
         if (lowerContent.includes('gosto') || lowerContent.includes('amo') || lowerContent.includes('prefiro')) {
-            score = 0.9;
+            score += 0.2;
         }
         
-        // Rejeições
+        // Rejeições também são importantes
         if (lowerContent.includes('odeio') || lowerContent.includes('não gosto')) {
-            score = 0.8;
+            score += 0.15;
         }
         
-        // Informações pessoais
-        if (lowerContent.includes('meu') || lowerContent.includes('minha') || /[A-Z][a-z]+/.test(content)) {
-            score = Math.max(score, 0.7);
-        }
-        
-        // Sentimento forte
-        const strongPositive = ['amo', 'adoro', 'demais', 'insano', 'brabo'];
-        const strongNegative = ['odeio', 'péssimo', 'horrível'];
+        // ===== 3. SENTIMENTO FORTE =====
+        const strongPositive = ['amo', 'adoro', 'demais', 'insano', 'brabo', 'perfeito', 'incrível'];
+        const strongNegative = ['odeio', 'péssimo', 'horrível', 'detesto', 'ruim demais'];
         
         if (strongPositive.some(w => lowerContent.includes(w)) || 
             strongNegative.some(w => lowerContent.includes(w))) {
+            score += 0.15;
+        }
+        
+        // ===== 4. DECAY TEMPORAL (memórias recentes mais relevantes) =====
+        if (metadata.timestamp) {
+            const ageInDays = (Date.now() - metadata.timestamp) / (24 * 60 * 60 * 1000);
+            const decayFactor = Math.exp(-ageInDays / 30); // Decai 50% a cada 30 dias
+            score *= (0.7 + 0.3 * decayFactor); // Mínimo 70% do score, máximo 100%
+        }
+        
+        // ===== 5. FREQUÊNCIA (repetição aumenta relevância) =====
+        if (metadata.mentionCount) {
+            const frequencyBonus = Math.min(metadata.mentionCount * 0.05, 0.2); // Máximo +0.2
+            score += frequencyBonus;
+        }
+        
+        // ===== 6. TIPO DE MEMÓRIA =====
+        const typeWeights = {
+            'preference': 0.15,
+            'personal_info': 0.2,
+            'opinion': 0.1,
+            'fact': 0.05
+        };
+        
+        score += typeWeights[type] || 0;
+        
+        // ===== 7. INFORMAÇÕES PESSOAIS (nomes próprios, posse) =====
+        if (lowerContent.includes('meu') || lowerContent.includes('minha') || /[A-Z][a-z]+/.test(content)) {
             score += 0.1;
         }
         
-        // Tipo de memória
-        if (type === 'preference') {
-            score += 0.1;
-        }
-        
-        return Math.min(1.0, score);
+        // Garantir range 0.0 - 1.0
+        return Math.max(0.0, Math.min(1.0, score));
     }
     
     /**

@@ -179,17 +179,8 @@ EVITE:
 
         // Adicionar histórico de conversa PRIMEIRO (ordem cronológica)
         if (context.history && context.history.length > 0) {
-            userPrompt += `=== HISTÓRICO DA CONVERSA (do mais antigo ao mais recente) ===\n`;
-            
-            const recentHistory = context.history.slice(-8); // últimas 8 mensagens
-            recentHistory.forEach((msg, index) => {
-                const author = msg.isBot ? '[Você - Daci]' : `[${msg.author}]`;
-                const content = msg.content.substring(0, 300); // aumentar limite
-                const indicator = index === recentHistory.length - 1 ? ' ⬅️ (mais recente)' : '';
-                userPrompt += `${author}: ${content}${indicator}\n`;
-            });
-            
-            userPrompt += `\n=== FIM DO HISTÓRICO ===\n`;
+            const compressedHistory = this.compressHistory(context.history);
+            userPrompt += compressedHistory;
         }
 
         // Adicionar análise de sentimento se disponível
@@ -350,6 +341,88 @@ Responda agora como Daci, de forma natural e contextual:`;
         };
 
         return commandPrompts[commandName] || 'Responda adequadamente ao comando';
+    }
+    
+    /**
+     * Comprime histórico se muito longo (limite 2500 tokens)
+     * @param {Array} history - Histórico completo
+     * @returns {string} Histórico formatado (comprimido se necessário)
+     */
+    compressHistory(history) {
+        const MAX_TOKENS = 2500;
+        const MAX_RECENT_MESSAGES = 3; // Últimas 3 sempre detalhadas
+        
+        // Calcular tokens estimados do histórico completo
+        let fullHistory = '';
+        history.slice(-8).forEach((msg, index) => {
+            const author = msg.isBot ? '[Você - Daci]' : `[${msg.author}]`;
+            const content = msg.content.substring(0, 300);
+            const indicator = index === history.slice(-8).length - 1 ? ' ⬅️ (mais recente)' : '';
+            fullHistory += `${author}: ${content}${indicator}\n`;
+        });
+        
+        const estimatedTokens = this.estimateTokens(fullHistory);
+        
+        // Se está dentro do limite, retornar completo
+        if (estimatedTokens < MAX_TOKENS * 0.6) { // 60% do limite (folga para resto do prompt)
+            return `=== HISTÓRICO DA CONVERSA (do mais antigo ao mais recente) ===\n${fullHistory}\n=== FIM DO HISTÓRICO ===\n`;
+        }
+        
+        // COMPRESSÃO: Últimas 3 detalhadas + resumo das antigas
+        const recentMessages = history.slice(-MAX_RECENT_MESSAGES);
+        const oldMessages = history.slice(0, -MAX_RECENT_MESSAGES);
+        
+        let compressed = '=== HISTÓRICO DA CONVERSA ===\n';
+        
+        // Resumir mensagens antigas
+        if (oldMessages.length > 0) {
+            const topics = this.extractTopicsFromHistory(oldMessages);
+            compressed += `[Resumo de ${oldMessages.length} mensagens anteriores: conversaram sobre ${topics.join(', ')}]\n\n`;
+        }
+        
+        // Adicionar últimas 3 mensagens detalhadas
+        compressed += '=== MENSAGENS RECENTES ===\n';
+        recentMessages.forEach((msg, index) => {
+            const author = msg.isBot ? '[Você - Daci]' : `[${msg.author}]`;
+            const content = msg.content.substring(0, 200); // Limite menor na compressão
+            const indicator = index === recentMessages.length - 1 ? ' ⬅️ (atual)' : '';
+            compressed += `${author}: ${content}${indicator}\n`;
+        });
+        
+        compressed += '\n=== FIM DO HISTÓRICO ===\n';
+        
+        return compressed;
+    }
+    
+    /**
+     * Estima número de tokens (1 token ≈ 4 caracteres em PT-BR)
+     * @param {string} text - Texto para estimar
+     * @returns {number} Tokens estimados
+     */
+    estimateTokens(text) {
+        // Heurística simples: 1 token ≈ 4 caracteres para português
+        return Math.ceil(text.length / 4);
+    }
+    
+    /**
+     * Extrai tópicos principais de mensagens antigas (para resumo)
+     * @param {Array} messages - Mensagens antigas
+     * @returns {Array<string>} Lista de tópicos
+     */
+    extractTopicsFromHistory(messages) {
+        const topics = new Set();
+        const keywords = ['meme', 'música', 'jogo', 'anime', 'filme', 'comida', 'trabalho', 'pizza', 'festa'];
+        
+        messages.forEach(msg => {
+            const content = msg.content.toLowerCase();
+            keywords.forEach(keyword => {
+                if (content.includes(keyword)) {
+                    topics.add(keyword);
+                }
+            });
+        });
+        
+        return topics.size > 0 ? Array.from(topics) : ['assuntos gerais'];
     }
 }
 
