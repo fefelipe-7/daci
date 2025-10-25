@@ -42,26 +42,12 @@ class Preprocessor {
                 historyLimit: 10
             });
             
-            // 3.5. Buscar histórico de conversa do MemoryManager (prioridade)
-            const memoryManager = require('./MemoryManager');
-            const memoryHistory = options.activeMemory 
-                ? memoryManager.getHistory(user.id, 10)
-                : [];
-            
-            // Mesclar históricos: priorizar MemoryManager se existir
-            if (memoryHistory.length > 0) {
-                // Converter formato MemoryManager para formato ContextBuilder
-                context.history = memoryHistory.map(msg => ({
-                    author: msg.role === 'user' ? user.username : 'Daci',
-                    authorId: msg.role === 'user' ? user.id : 'bot',
-                    content: msg.content,
-                    timestamp: msg.timestamp,
-                    isBot: msg.role === 'bot'
-                }));
-                logger.debug('preprocessor', `Usando histórico do MemoryManager: ${memoryHistory.length} mensagens`);
-            } else if (!context.history || context.history.length === 0) {
-                logger.debug('preprocessor', 'Sem histórico disponível (primeira interação)');
-            }
+            // 3.5. Criar histórico híbrido inteligente (70% MemoryManager + 30% Discord)
+            context.history = await this.buildHybridHistory(
+                user,
+                context.history, // histórico do Discord
+                options.activeMemory
+            );
             
             // 4. Limpar mensagem
             const cleanMessage = this.cleanMessage(message.content);
@@ -213,6 +199,59 @@ class Preprocessor {
             historySize: pkg.metadata.context.conversationActive ? 'yes' : 'no',
             promptLength: pkg.prompt.system.length + pkg.prompt.user.length
         };
+    }
+    
+    /**
+     * Constrói histórico híbrido: 70% MemoryManager + 30% Discord
+     * @param {Object} user - Objeto do usuário
+     * @param {Array} discordHistory - Histórico do canal do Discord
+     * @param {Object} activeMemory - Memória ativa do MemoryManager
+     * @returns {Array} Histórico mesclado
+     */
+    async buildHybridHistory(user, discordHistory = [], activeMemory = null) {
+        const memoryManager = require('./MemoryManager');
+        
+        // 1. Buscar histórico do MemoryManager (conversas user-bot)
+        const memoryHistory = activeMemory 
+            ? memoryManager.getHistory(user.id, 10)
+            : [];
+        
+        if (memoryHistory.length === 0) {
+            // Sem histórico no MemoryManager, usar Discord
+            logger.debug('preprocessor', 'Usando histórico do Discord (primeira interação)');
+            return discordHistory || [];
+        }
+        
+        // 2. Converter MemoryManager para formato ContextBuilder
+        const formattedMemory = memoryHistory.map(msg => ({
+            author: msg.role === 'user' ? user.username : 'Daci',
+            authorId: msg.role === 'user' ? user.id : 'bot',
+            content: msg.content,
+            timestamp: msg.timestamp,
+            isBot: msg.role === 'bot',
+            source: 'memory'
+        }));
+        
+        // 3. Pegar últimas 3 mensagens do Discord ANTES da menção (30%)
+        const discordBeforeMention = (discordHistory || [])
+            .filter(msg => !msg.isBot) // Só mensagens de usuários (contexto do canal)
+            .slice(-3)
+            .map(msg => ({
+                ...msg,
+                source: 'discord'
+            }));
+        
+        // 4. Mesclar: Discord ANTES + MemoryManager (ordem cronológica)
+        const hybridHistory = [
+            ...discordBeforeMention,
+            ...formattedMemory
+        ].sort((a, b) => a.timestamp - b.timestamp);
+        
+        logger.debug('preprocessor', 
+            `Histórico híbrido: ${discordBeforeMention.length} Discord + ${formattedMemory.length} Memory = ${hybridHistory.length} total`
+        );
+        
+        return hybridHistory;
     }
 }
 

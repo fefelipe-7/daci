@@ -80,47 +80,69 @@ class ContextBuilder {
     }
     
     /**
-     * Busca histórico de mensagens do canal
+     * Busca histórico de mensagens do canal com retry e backoff exponencial
      */
     async getMessageHistory(channel, currentMessage, limit = 10) {
         if (!channel || !channel.messages) {
             return [];
         }
         
-        try {
-            // Buscar últimas mensagens (excluindo a atual)
-            const messages = await channel.messages.fetch({ 
-                limit: limit + 1,
-                before: currentMessage?.id 
-            });
-            
-            // Converter para array e formatar
-            const history = [];
-            messages.forEach(msg => {
-                // Ignorar mensagens do próprio bot e a mensagem atual
-                if (msg.author.bot && msg.author.id === currentMessage?.client?.user?.id) {
-                    return;
+        const maxAttempts = 3;
+        const baseDelay = 1000; // 1 segundo
+        
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                // Buscar últimas mensagens (excluindo a atual)
+                const messages = await channel.messages.fetch({ 
+                    limit: limit + 1,
+                    before: currentMessage?.id 
+                });
+                
+                // Converter para array e formatar
+                const history = [];
+                messages.forEach(msg => {
+                    // Ignorar mensagens do próprio bot e a mensagem atual
+                    if (msg.author.bot && msg.author.id === currentMessage?.client?.user?.id) {
+                        return;
+                    }
+                    
+                    history.push({
+                        id: msg.id,
+                        author: msg.author.username,
+                        authorId: msg.author.id,
+                        content: msg.content.substring(0, 200), // Limitar tamanho
+                        timestamp: msg.createdTimestamp,
+                        isBot: msg.author.bot
+                    });
+                });
+                
+                // Ordenar por timestamp (mais antigo primeiro)
+                history.sort((a, b) => a.timestamp - b.timestamp);
+                
+                if (attempt > 1) {
+                    console.log(`[ContextBuilder] Sucesso na tentativa ${attempt}`);
                 }
                 
-                history.push({
-                    id: msg.id,
-                    author: msg.author.username,
-                    authorId: msg.author.id,
-                    content: msg.content.substring(0, 200), // Limitar tamanho
-                    timestamp: msg.createdTimestamp,
-                    isBot: msg.author.bot
-                });
-            });
-            
-            // Ordenar por timestamp (mais antigo primeiro)
-            history.sort((a, b) => a.timestamp - b.timestamp);
-            
-            return history.slice(0, limit);
-            
-        } catch (error) {
-            console.error('[ContextBuilder] Erro ao buscar histórico:', error.message);
-            return [];
+                return history.slice(0, limit);
+                
+            } catch (error) {
+                const isLastAttempt = attempt === maxAttempts;
+                const delay = baseDelay * Math.pow(2, attempt - 1); // Backoff exponencial: 1s, 2s, 4s
+                
+                console.error(`[ContextBuilder] Tentativa ${attempt}/${maxAttempts} falhou: ${error.message}`);
+                
+                if (isLastAttempt) {
+                    console.error('[ContextBuilder] Todas as tentativas falharam, retornando histórico vazio');
+                    return [];
+                }
+                
+                // Aguardar antes da próxima tentativa
+                console.log(`[ContextBuilder] Aguardando ${delay}ms antes da próxima tentativa...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
         }
+        
+        return []; // Fallback (não deveria chegar aqui)
     }
     
     /**

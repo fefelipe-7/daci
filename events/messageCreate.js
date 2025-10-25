@@ -126,10 +126,11 @@ module.exports = {
                         logger.debug('memory', `Contexto criado para user ${message.author.id}`);
                     }
                     
-                    // Adicionar mensagem do usuário ao histórico
+                    // Adicionar mensagem do usuário ao histórico (LIMPA MENÇÕES PRIMEIRO)
+                    const cleanContent = message.content.replace(/<@!?\d+>/g, '').trim();
                     memoryManager.addToHistory(message.author.id, {
                         role: 'user',
-                        content: message.content
+                        content: cleanContent
                     }, message.guild?.id);
                     
                     // 1. PREPROCESSAR

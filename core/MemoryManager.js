@@ -19,6 +19,10 @@ class MemoryManager {
         this.activeContexts = new Map(); // { userId: { data, expiresAt } }
         this.conversationHistory = new Map(); // { userId: [messages] }
         
+        // ===== LOCKS PARA PREVENIR RACE CONDITIONS =====
+        this.consolidationLocks = new Map(); // { userId: boolean }
+        this.processingLocks = new Map(); // { userId: Promise }
+        
         // ===== MEMÓRIA DE LONGO PRAZO (SQLite) =====
         const dbDir = path.join(__dirname, '..', 'database');
         if (!fs.existsSync(dbDir)) {
@@ -154,8 +158,8 @@ class MemoryManager {
             history.shift();
         }
         
-        // Verificar se deve consolidar
-        if (history.length >= this.CONSOLIDATION_THRESHOLD) {
+        // Verificar se deve consolidar (COM LOCK para evitar race condition)
+        if (history.length >= this.CONSOLIDATION_THRESHOLD && !this.consolidationLocks.get(userId)) {
             this.consolidateIfNeeded(userId, guildId);
         }
     }
@@ -197,6 +201,14 @@ class MemoryManager {
             return;
         }
         
+        // LOCK: Prevenir consolidações simultâneas do mesmo usuário
+        if (this.consolidationLocks.get(userId)) {
+            logger.debug('memory', `Consolidação já em andamento para user ${userId}`);
+            return;
+        }
+        
+        this.consolidationLocks.set(userId, true);
+        
         try {
             // Extrair tópicos mencionados
             const topics = this.extractTopics(history);
@@ -236,6 +248,9 @@ class MemoryManager {
             
         } catch (error) {
             logger.error('memory', `Erro ao consolidar memória: ${error.message}`);
+        } finally {
+            // UNLOCK: Liberar lock de consolidação
+            this.consolidationLocks.set(userId, false);
         }
     }
     
