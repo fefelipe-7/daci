@@ -342,7 +342,10 @@ Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para ma
 - 📜 [Código de Conduta](CODE_OF_CONDUCT.md) - Nossas diretrizes de comunidade
 - 🔒 [Política de Segurança](SECURITY.md) - Como reportar vulnerabilidades
 - 📝 [Changelog](CHANGELOG.md) - Histórico de versões e mudanças
-- 🚀 [Guia de Deploy](DEPLOY_GITHUB.md) - Deploy no Render via GitHub
+- 🗂️ [Estrutura do Projeto](PROJECT_STRUCTURE.md) - Organização completa dos arquivos
+- 🚀 [Guia de Deploy](docs/DEPLOY_GITHUB.md) - Deploy no Render via GitHub
+- ⚡ [Quick Start](docs/QUICKSTART.md) - Início rápido para desenvolvimento
+- 📋 [Pre-Deploy Checklist](docs/PRE_DEPLOY_CHECKLIST.md) - Checklist antes de fazer deploy
 
 ---
 
