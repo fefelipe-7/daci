@@ -42,6 +42,27 @@ class Preprocessor {
                 historyLimit: 10
             });
             
+            // 3.5. Buscar histórico de conversa do MemoryManager (prioridade)
+            const memoryManager = require('./MemoryManager');
+            const memoryHistory = options.activeMemory 
+                ? memoryManager.getHistory(user.id, 10)
+                : [];
+            
+            // Mesclar históricos: priorizar MemoryManager se existir
+            if (memoryHistory.length > 0) {
+                // Converter formato MemoryManager para formato ContextBuilder
+                context.history = memoryHistory.map(msg => ({
+                    author: msg.role === 'user' ? user.username : 'Daci',
+                    authorId: msg.role === 'user' ? user.id : 'bot',
+                    content: msg.content,
+                    timestamp: msg.timestamp,
+                    isBot: msg.role === 'bot'
+                }));
+                logger.debug('preprocessor', `Usando histórico do MemoryManager: ${memoryHistory.length} mensagens`);
+            } else if (!context.history || context.history.length === 0) {
+                logger.debug('preprocessor', 'Sem histórico disponível (primeira interação)');
+            }
+            
             // 4. Limpar mensagem
             const cleanMessage = this.cleanMessage(message.content);
             
@@ -57,7 +78,8 @@ class Preprocessor {
                     sentiment,
                     personality: personality.parametrosFinais,
                     tipoRelacao: personality.tipoRelacao,
-                    estiloResposta: personality.estiloResposta
+                    estiloResposta: personality.estiloResposta,
+                    activeMemory: options.activeMemory  // FIX: passar activeMemory para o prompt
                 }
             );
             

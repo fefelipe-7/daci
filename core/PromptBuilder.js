@@ -23,7 +23,7 @@ class PromptBuilder {
             system: systemPrompt + '\n\n' + styleGuide,
             user: userContext,
             temperature: this.calculateTemperature(userProfile),
-            maxTokens: 256 // Resposta curta para chat
+            maxTokens: 768 // Respostas naturais e contextuais
         };
     }
 
@@ -175,30 +175,35 @@ EVITE:
      * Constrói contexto da mensagem atual do usuário
      */
     buildUserContext(message, context = {}) {
-        let userPrompt = `Mensagem do usuário: "${message}"`;
+        let userPrompt = '';
+
+        // Adicionar histórico de conversa PRIMEIRO (ordem cronológica)
+        if (context.history && context.history.length > 0) {
+            userPrompt += `=== HISTÓRICO DA CONVERSA (do mais antigo ao mais recente) ===\n`;
+            
+            const recentHistory = context.history.slice(-8); // últimas 8 mensagens
+            recentHistory.forEach((msg, index) => {
+                const author = msg.isBot ? '[Você - Daci]' : `[${msg.author}]`;
+                const content = msg.content.substring(0, 300); // aumentar limite
+                const indicator = index === recentHistory.length - 1 ? ' ⬅️ (mais recente)' : '';
+                userPrompt += `${author}: ${content}${indicator}\n`;
+            });
+            
+            userPrompt += `\n=== FIM DO HISTÓRICO ===\n`;
+        }
 
         // Adicionar análise de sentimento se disponível
         if (context.sentiment) {
             const { classification, intensity, emotions } = context.sentiment;
-            userPrompt += `\n\nSentimento detectado: ${classification} (intensidade: ${intensity.toFixed(2)})`;
+            userPrompt += `\nSentimento detectado: ${classification} (intensidade: ${intensity.toFixed(2)})`;
             if (emotions && emotions.length > 0 && !emotions.includes('neutral')) {
                 userPrompt += `\nEmoções: ${emotions.join(', ')}`;
             }
         }
 
-        // Adicionar histórico de conversa
-        if (context.history && context.history.length > 0) {
-            userPrompt += `\n\nContexto da conversa recente:`;
-            context.history.slice(-5).forEach(msg => {
-                const author = msg.isBot ? 'Você (Daci)' : msg.author;
-                const content = msg.content.substring(0, 100);
-                userPrompt += `\n- ${author}: ${content}`;
-            });
-        }
-
         // Adicionar memórias ativas (tópicos e preferências)
         if (context.activeMemory) {
-            const { knownPreferences, recentTopics } = context.activeMemory;
+            const { knownPreferences, recentTopics, messageCount } = context.activeMemory;
             
             if (recentTopics && recentTopics.length > 0) {
                 userPrompt += `\n\nTópicos recentes de conversa: ${recentTopics.join(', ')}`;
@@ -210,6 +215,11 @@ EVITE:
                     const content = pref.content.substring(0, 80);
                     userPrompt += `\n- ${content}`;
                 });
+            }
+            
+            // Adicionar resumo da conversa ativa
+            if (messageCount > 5) {
+                userPrompt += `\n\nEsta conversa já tem ${messageCount} mensagens trocadas. Mantenha a continuidade natural.`;
             }
         }
 
@@ -240,13 +250,28 @@ EVITE:
         if (context.mentions && context.mentions.length > 0) {
             const userMentions = context.mentions.filter(m => m.type === 'user');
             if (userMentions.length > 0) {
-                userPrompt += `\nMenções: ${userMentions.map(m => m.username).join(', ')}`;
+                userPrompt += `\n\nOutras pessoas mencionadas: ${userMentions.map(m => m.username).join(', ')}`;
+                userPrompt += `\n(Considere essas menções na sua resposta se relevante)`;
             }
         }
 
-        userPrompt += `\n\nResponda de forma natural, considerando TODO o contexto acima. Mantenha sua personalidade e adapte-se ao sentimento e situação. Seja você mesmo - o Daci.
+        // MENSAGEM ATUAL DO USUÁRIO (após todo o contexto)
+        userPrompt += `\n\n=== MENSAGEM ATUAL DO USUÁRIO ===\n"${message}"\n`;
 
-IMPORTANTE: Responda de forma direta e concisa. NÃO faça perguntas no final da resposta a menos que seja absolutamente necessário para entender algo. Suas respostas devem ser afirmações, não questionamentos.`;
+        // INSTRUÇÕES DE RESPOSTA (mais específicas e contextuais)
+        userPrompt += `\n=== INSTRUÇÕES DE RESPOSTA ===
+
+1. CONTEXTO: Você está em uma conversa contínua. Refira-se ao que foi dito antes naturalmente.
+
+2. CONTINUIDADE: Se o usuário mencionar algo já discutido, demonstre que você lembra e conecte com a conversa anterior.
+
+3. PERGUNTAS: Se o usuário fizer uma pergunta sobre algo já mencionado, use esse contexto para responder de forma completa.
+
+4. TOM: Mantenha sua personalidade (Daci) - informal, mandrake, brasileiro. Não seja genérico ou robótico.
+
+5. FORMATO: Responda de forma direta mas natural. NÃO faça perguntas no final a menos que seja essencial para entender algo.
+
+Responda agora como Daci, de forma natural e contextual:`;
 
         return userPrompt;
     }
