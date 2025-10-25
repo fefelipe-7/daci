@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build
+coverage/
+dist/
+build/
+
+# Logs
+logs/
+*.log
+
+# Database
+*.db
+*.sqlite
+database/personality.db
+
+# Tests (opcional - remova se quiser lint em testes)
+# tests/
+
+# Docs
+docs/
+
+# Config files
+.eslintrc.js
+jest.config.js
+.prettierrc.js
+
