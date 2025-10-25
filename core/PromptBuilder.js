@@ -259,6 +259,34 @@ EVITE:
                 userPrompt += `\n(Considere essas menções na sua resposta se relevante)`;
             }
         }
+        
+        // NOVO: Adicionar entidades detectadas
+        if (context.entities && this.hasSignificantEntities(context.entities)) {
+            userPrompt += `\n\n=== ENTIDADES DETECTADAS NA CONVERSA ===\n`;
+            if (context.entities.pessoas && context.entities.pessoas.length > 0) {
+                userPrompt += `Pessoas: ${context.entities.pessoas.join(', ')}\n`;
+            }
+            if (context.entities.eventos && context.entities.eventos.length > 0) {
+                const eventos = context.entities.eventos.map(e => e.tipo || e).join(', ');
+                userPrompt += `Eventos: ${eventos}\n`;
+            }
+            if (context.entities.lugares && context.entities.lugares.length > 0) {
+                userPrompt += `Lugares: ${context.entities.lugares.join(', ')}\n`;
+            }
+            if (context.entities.objetos && context.entities.objetos.length > 0) {
+                userPrompt += `Objetos/Coisas: ${context.entities.objetos.join(', ')}\n`;
+            }
+        }
+        
+        // NOVO: Adicionar pronomes resolvidos
+        if (context.pronounResolution && context.pronounResolution.resolutions && context.pronounResolution.resolutions.length > 0) {
+            userPrompt += `\n=== PRONOMES RESOLVIDOS ===\n`;
+            context.pronounResolution.resolutions.forEach(r => {
+                if (r.entity && r.confidence > 0.5) {
+                    userPrompt += `- "${r.pronoun}" refere-se a: ${r.entity}\n`;
+                }
+            });
+        }
 
         // MENSAGEM ATUAL DO USUÁRIO (após todo o contexto)
         userPrompt += `\n\n=== MENSAGEM ATUAL DO USUÁRIO ===\n"${message}"\n`;
@@ -437,6 +465,20 @@ Responda agora como Daci, de forma natural e contextual:`;
         });
         
         return topics.size > 0 ? Array.from(topics) : ['assuntos gerais'];
+    }
+    
+    /**
+     * Verifica se há entidades significativas
+     * @param {Object} entities - Entidades detectadas
+     * @returns {boolean} True se há entidades relevantes
+     */
+    hasSignificantEntities(entities) {
+        if (!entities) return false;
+        
+        return (entities.pessoas && entities.pessoas.length > 0) ||
+               (entities.eventos && entities.eventos.length > 0) ||
+               (entities.lugares && entities.lugares.length > 0) ||
+               (entities.objetos && entities.objetos.length > 0);
     }
 }
 

@@ -9,6 +9,8 @@ const PromptBuilder = require('./PromptBuilder');
 const ContextBuilder = require('./ContextBuilder');
 const SentimentAnalyzer = require('./SentimentAnalyzer');
 const IntentDetector = require('./IntentDetector');
+const EntityRecognizer = require('./EntityRecognizer');
+const PronounResolver = require('./PronounResolver');
 const logger = require('./Logger');
 
 class Preprocessor {
@@ -16,12 +18,14 @@ class Preprocessor {
         this.promptBuilder = new PromptBuilder();
         this.contextBuilder = new ContextBuilder();
         this.sentimentAnalyzer = new SentimentAnalyzer();
+        this.entityRecognizer = new EntityRecognizer();
+        this.pronounResolver = new PronounResolver();
         
         // Cache de perfis de usuário (performance)
         this.profileCache = new Map(); // { userId_guildId: {profile, expiresAt} }
         this.CACHE_TTL = 10 * 60 * 1000; // 10 minutos
         
-        logger.info('preprocessor', 'Preprocessor inicializado (com cache)');
+        logger.info('preprocessor', 'Preprocessor inicializado (com cache + entity recognition)');
     }
     
     /**
@@ -57,7 +61,18 @@ class Preprocessor {
             // 4. Limpar mensagem
             const cleanMessage = this.cleanMessage(message.content);
             
-            // 4.5. Detectar intenção da mensagem
+            // 4.5. NOVO: Extrair entidades da mensagem
+            const entities = this.entityRecognizer.extractEntities(cleanMessage, user.id);
+            logger.debug('preprocessor', `Entidades: ${JSON.stringify(entities)}`);
+            
+            // 4.6. NOVO: Resolver pronomes baseado no contexto
+            const contextState = options.activeMemory || {};
+            const pronounResolution = this.pronounResolver.resolve(cleanMessage, contextState);
+            if (pronounResolution.resolutions.length > 0) {
+                logger.debug('preprocessor', `Pronomes resolvidos: ${JSON.stringify(pronounResolution.resolutions)}`);
+            }
+            
+            // 4.7. Detectar intenção da mensagem
             const intent = IntentDetector.detect(cleanMessage, context.history);
             logger.debug('preprocessor', `Intent detectado: ${intent.intent} (confiança: ${intent.confidence.toFixed(2)})`);
             
@@ -74,7 +89,9 @@ class Preprocessor {
                     personality: personality.parametrosFinais,
                     tipoRelacao: personality.tipoRelacao,
                     estiloResposta: personality.estiloResposta,
-                    activeMemory: options.activeMemory  // FIX: passar activeMemory para o prompt
+                    activeMemory: options.activeMemory,  // FIX: passar activeMemory para o prompt
+                    entities,  // NOVO: Entidades detectadas
+                    pronounResolution  // NOVO: Pronomes resolvidos
                 }
             );
             
@@ -92,6 +109,8 @@ class Preprocessor {
                 personality,
                 sentiment,
                 intent, // Intenção detectada
+                entities, // NOVO: Entidades detectadas
+                pronounResolution, // NOVO: Pronomes resolvidos
                 context: {
                     temporal: context.temporal,
                     conversationActive: context.history?.length > 0
