@@ -39,8 +39,9 @@ class MemoryManager {
         
         // ===== LIMPEZA AUTOMÁTICA =====
         this.startCleanupTimer();
+        this.startDailyForgetting();
         
-        logger.info('memory', '🧠 MemoryManager iniciado (RAM + SQLite)');
+        logger.info('memory', '🧠 MemoryManager iniciado (RAM + SQLite + esquecimento ativo)');
     }
     
     // ========================================================================
@@ -474,6 +475,55 @@ class MemoryManager {
         setInterval(() => {
             this.cleanupExpiredContexts();
         }, 5 * 60 * 1000);
+    }
+    
+    /**
+     * Iniciar sistema de esquecimento ativo (1x por dia à meia-noite)
+     */
+    startDailyForgetting() {
+        // Calcular tempo até a próxima meia-noite (horário de Brasília)
+        const scheduleNextForgetting = () => {
+            const now = new Date();
+            const brasiliaTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+            
+            // Próxima meia-noite
+            const nextMidnight = new Date(brasiliaTime);
+            nextMidnight.setHours(24, 0, 0, 0);
+            
+            const msUntilMidnight = nextMidnight - brasiliaTime;
+            
+            logger.info('memory', `Próximo esquecimento ativo em ${Math.round(msUntilMidnight / 1000 / 60 / 60)}h`);
+            
+            setTimeout(() => {
+                this.performDailyForgetting();
+                scheduleNextForgetting(); // Reagendar para o próximo dia
+            }, msUntilMidnight);
+        };
+        
+        scheduleNextForgetting();
+    }
+    
+    /**
+     * Executar esquecimento ativo diário
+     */
+    performDailyForgetting() {
+        logger.info('memory', '🌙 Iniciando esquecimento ativo diário...');
+        
+        try {
+            // Limpar memórias antigas (90 dias, score < 0.3)
+            this.cleanupOldMemories(90, 0.3);
+            
+            // Limpar tópicos antigos (30 dias)
+            const cutoffTime = Date.now() - (30 * 24 * 60 * 60 * 1000);
+            const result = this.db.prepare(`
+                DELETE FROM conversation_topics 
+                WHERE ended_at < ?
+            `).run(cutoffTime);
+            
+            logger.success('memory', `🧹 Esquecimento ativo concluído: ${result.changes} tópicos antigos removidos`);
+        } catch (error) {
+            logger.error('memory', `Erro no esquecimento ativo: ${error.message}`);
+        }
     }
     
     /**
