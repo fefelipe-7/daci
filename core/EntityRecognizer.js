@@ -189,18 +189,26 @@ class EntityRecognizer {
     extractTemporal(doc, text) {
         const temporal = new Set();
         
-        // Usar compromise para datas
-        const dates = doc.dates().out('array');
-        dates.forEach(date => {
-            temporal.add(date.toLowerCase());
-        });
+        // Tentar usar compromise para datas (pode não estar disponível)
+        try {
+            if (doc.dates && typeof doc.dates === 'function') {
+                const dates = doc.dates().out('array');
+                dates.forEach(date => {
+                    temporal.add(date.toLowerCase());
+                });
+            }
+        } catch (error) {
+            // doc.dates() não disponível, usar apenas padrões manuais
+            logger.debug('entity-recognizer', 'doc.dates() não disponível, usando padrões manuais');
+        }
         
         // Expressões temporais comuns em português
         const temporalPatterns = [
             /\b(hoje|amanhã|ontem|depois|agora|já|logo|dps)\b/gi,
             /\b(semana que vem|mês que vem|ano que vem|próximo|próxima)\b/gi,
             /\b(segunda|terça|quarta|quinta|sexta|sábado|sabado|domingo)\b/gi,
-            /\b(manhã|tarde|noite|madrugada)\b/gi
+            /\b(manhã|tarde|noite|madrugada)\b/gi,
+            /\b(daqui a|em)\s+\d+\s+(hora|horas|dia|dias|semana|semanas)\b/gi
         ];
         
         temporalPatterns.forEach(pattern => {
