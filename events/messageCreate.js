@@ -14,6 +14,10 @@ const memoryManager = require('../core/memory/MemoryManager'); // Refatorado
 const fs = require('fs');
 const path = require('path');
 
+// Cache para evitar processar mensagens duplicadas
+const processedMessages = new Map();
+const MESSAGE_CACHE_TTL = 5000; // 5 segundos
+
 // Criar diretório de logs se não existir
 const logsDir = path.join(__dirname, '..', 'logs');
 if (!fs.existsSync(logsDir)) {
@@ -59,6 +63,25 @@ module.exports = {
     async execute(message) {
         // Ignorar mensagens de bots
         if (message.author.bot) return;
+
+        // PROTEÇÃO: Verificar se já processamos esta mensagem recentemente
+        const messageKey = `${message.id}-${message.author.id}`;
+        if (processedMessages.has(messageKey)) {
+            logger.debug('message', `Mensagem ${message.id} já processada, ignorando duplicata`);
+            return;
+        }
+        
+        // Marcar como processada
+        processedMessages.set(messageKey, Date.now());
+        
+        // Limpar cache antigo (a cada 10 mensagens para não sobrecarregar)
+        if (processedMessages.size > 100) {
+            for (const [key, timestamp] of processedMessages.entries()) {
+                if (Date.now() - timestamp > MESSAGE_CACHE_TTL) {
+                    processedMessages.delete(key);
+                }
+            }
+        }
 
         // Verificar se é menção ao bot OU resposta a uma mensagem do bot
         const isMention = message.mentions.has(message.client.user);
