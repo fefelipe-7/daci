@@ -11,6 +11,7 @@ const SentimentAnalyzer = require('./SentimentAnalyzer');
 const IntentDetector = require('./IntentDetector');
 const EntityRecognizer = require('./EntityRecognizer');
 const PronounResolver = require('./PronounResolver');
+const ReasoningEngine = require('./reasoning/ReasoningEngine'); // NOVO: Sistema de raciocínio
 const logger = require('./Logger');
 
 class Preprocessor {
@@ -20,12 +21,13 @@ class Preprocessor {
         this.sentimentAnalyzer = new SentimentAnalyzer();
         this.entityRecognizer = new EntityRecognizer();
         this.pronounResolver = new PronounResolver();
+        this.reasoningEngine = new ReasoningEngine(); // NOVO: Sistema de raciocínio lógico
         
         // Cache de perfis de usuário (performance)
         this.profileCache = new Map(); // { userId_guildId: {profile, expiresAt} }
         this.CACHE_TTL = 10 * 60 * 1000; // 10 minutos
         
-        logger.info('preprocessor', 'Preprocessor inicializado (com cache + entity recognition)');
+        logger.info('preprocessor', 'Preprocessor inicializado (com cache + entity recognition + reasoning)');
     }
     
     /**
@@ -79,6 +81,16 @@ class Preprocessor {
             // 5. Analisar sentimento
             const sentiment = this.sentimentAnalyzer.analyze(cleanMessage);
             
+            // 5.5. NOVO: Executar raciocínio lógico
+            const reasoning = this.reasoningEngine.analyze(cleanMessage, {
+                history: context.history,
+                activeMemory: options.activeMemory,
+                entities,
+                sentiment,
+                intent
+            });
+            logger.debug('reasoning', `Raciocínio: ${reasoning.metadata.activeReasoners} reasoners ativos, confiança ${(reasoning.metadata.confidence * 100).toFixed(0)}%`);
+            
             // 6. Construir prompt contextualizado
             const prompt = this.promptBuilder.buildPrompt(
                 userProfile,
@@ -91,7 +103,8 @@ class Preprocessor {
                     estiloResposta: personality.estiloResposta,
                     activeMemory: options.activeMemory,  // FIX: passar activeMemory para o prompt
                     entities,  // NOVO: Entidades detectadas
-                    pronounResolution  // NOVO: Pronomes resolvidos
+                    pronounResolution,  // NOVO: Pronomes resolvidos
+                    reasoning  // NOVO: Insights de raciocínio lógico
                 }
             );
             
@@ -111,6 +124,7 @@ class Preprocessor {
                 intent, // Intenção detectada
                 entities, // NOVO: Entidades detectadas
                 pronounResolution, // NOVO: Pronomes resolvidos
+                reasoning, // NOVO: Insights de raciocínio lógico
                 context: {
                     temporal: context.temporal,
                     conversationActive: context.history?.length > 0

@@ -115,6 +115,17 @@ class ContextFormatter {
                 }
             });
         }
+        
+        // NOVO: Adicionar insights de raciocínio lógico
+        if (context.reasoning && context.reasoning.metadata.confidence > 0.5) {
+            const ReasoningEngine = require('../reasoning/ReasoningEngine');
+            const engine = new ReasoningEngine();
+            const reasoningPrompt = engine.formatForPrompt(context.reasoning);
+            
+            if (reasoningPrompt) {
+                userPrompt += reasoningPrompt;
+            }
+        }
 
         // MENSAGEM ATUAL DO USUÁRIO
         userPrompt += `\n\n=== MENSAGEM ATUAL DO USUÁRIO ===\n"${message}"\n`;

@@ -7,14 +7,16 @@ const StyleEnforcer = require('./StyleEnforcer');
 const ResponseValidator = require('./ResponseValidator');
 const FallbackGenerator = require('./FallbackGenerator');
 const MetricsCollector = require('./MetricsCollector');
+const ReasoningEngine = require('./reasoning/ReasoningEngine'); // NOVO: Validação com raciocínio
 const logger = require('./Logger');
 
 class Postprocessor {
     constructor(processor = null, database = null) {
         this.styleEnforcer = new StyleEnforcer(processor);
         this.metricsCollector = new MetricsCollector(database);
+        this.reasoningEngine = new ReasoningEngine(); // NOVO: Validação com raciocínio
         
-        logger.info('postprocessor', 'Postprocessor inicializado');
+        logger.info('postprocessor', 'Postprocessor inicializado (com validação de raciocínio)');
     }
     
     /**
@@ -57,6 +59,21 @@ class Postprocessor {
             
             // 4. Aplicar transformações finais
             content = this.applyFinalTransformations(content, originalPkg);
+            
+            // 4.5. NOVO: Validar resposta contra raciocínio lógico
+            if (originalPkg.metadata && originalPkg.metadata.reasoning) {
+                const reasoningValidation = this.reasoningEngine.validateResponse(content, originalPkg.metadata.reasoning);
+                
+                if (reasoningValidation.warnings.length > 0) {
+                    logger.warn('postprocessor', `Avisos de raciocínio: ${reasoningValidation.warnings.join('; ')}`);
+                }
+                
+                // Se validação de raciocínio falhou muito, considerar ajuste
+                if (!reasoningValidation.isValid && reasoningValidation.score < 0.5) {
+                    logger.warn('postprocessor', `Resposta não alinhada com raciocínio (score: ${reasoningValidation.score.toFixed(2)})`);
+                    // Aqui poderia reprocessar, mas por ora apenas logamos
+                }
+            }
             
             // 5. Validação final
             if (!ResponseValidator.isSafe(content)) {
