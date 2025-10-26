@@ -68,18 +68,6 @@ daci/
 │   ├── vic.json                  # Perfil Vic
 │   └── ...
 │
-├── 🧪 tests/                     # Testes automatizados
-│   ├── unit/                     # Testes unitários
-│   │   ├── core/                 # Testes dos módulos core
-│   │   └── commands/             # Testes de comandos
-│   ├── integration/              # Testes de integração
-│   ├── fixtures/                 # Dados mock
-│   │   ├── mock-users.js
-│   │   └── mock-messages.js
-│   ├── setup/                    # Setup dos testes
-│   │   └── jest.setup.js
-│   └── README.md                 # Documentação de testes
-│
 ├── 🛠️ scripts/                  # Scripts utilitários
 │   ├── deploy-commands.js        # Deploy de comandos
 │   ├── setup.js                  # Setup inicial
@@ -98,13 +86,9 @@ daci/
 │   ├── docbase-1.md              # Documentação interna
 │   └── docbase-2-linguagem-mandrake.md
 │
-├── 🤖 .github/                   # GitHub Actions e templates
-│   ├── workflows/                # CI/CD workflows
-│   │   ├── ci.yml                # Continuous Integration
-│   │   ├── security.yml          # Security scans
-│   │   ├── code-quality.yml      # Quality checks
-│   │   └── release.yml           # Release automation
-│   └── PULL_REQUEST_TEMPLATE.md  # Template de PR
+├── 🤖 .github/                   # GitHub Actions
+│   └── workflows/                # CI/CD workflows
+│       └── ci.yml                # Lint e Build Check
 │
 ├── 📊 logs/                      # Logs do bot
 │   └── personality_interactions.log
@@ -113,10 +97,8 @@ daci/
     ├── .env                      # Variáveis de ambiente
     ├── .gitignore                # Git ignore
     ├── .gitattributes            # Git attributes
-    ├── .eslintrc.js              # ESLint config
-    ├── .eslintignore             # ESLint ignore
-    ├── .prettierrc.js            # Prettier config
-    └── .prettierignore           # Prettier ignore
+    ├── .eslintrc.js              # ESLint config (básico)
+    └── .eslintignore             # ESLint ignore
 ```
 
 ## 🎯 Princípios de Organização
@@ -124,9 +106,9 @@ daci/
 ### ✅ Arquivos na Raiz
 Apenas arquivos essenciais e documentação principal:
 - **Entry point**: `bot.js`
-- **Configurações principais**: `package.json`, `config.json`, `jest.config.js`
+- **Configurações principais**: `package.json`, `config.json`
 - **Documentação oficial**: README, CONTRIBUTING, SECURITY, etc.
-- **Dot files**: Configurações de ferramentas (`.eslintrc.js`, `.prettierrc.js`, etc.)
+- **Dot files**: Configurações básicas (`.eslintrc.js`, `.gitignore`, etc.)
 
 ### 📁 Diretórios Principais
 
@@ -143,13 +125,6 @@ Comandos organizados por categoria:
 - `music/` - Sistema de música
 - `personality/` - Personalidades
 - `utils/` - Utilitários
-
-#### `tests/` - Testes Automatizados
-Estrutura completa de testes:
-- `unit/` - Testes unitários isolados
-- `integration/` - Testes de integração
-- `fixtures/` - Mocks e dados de teste
-- `setup/` - Configuração global
 
 #### `docs/` - Documentação Técnica
 Guias técnicos e documentação de desenvolvimento:
@@ -234,18 +209,11 @@ core/personality/
 1. Criar arquivo em `core/` ou submódulo apropriado
 2. Exportar como CommonJS (`module.exports`)
 3. Documentar com JSDoc
-4. Adicionar testes em `tests/unit/core/`
-
-### Adicionar Novo Teste
-1. Criar arquivo `*.test.js` em `tests/unit/` ou `tests/integration/`
-2. Seguir padrão Jest (describe/test)
-3. Usar mocks de `tests/fixtures/`
 
 ## 📖 Documentação Relacionada
 
 - [README.md](README.md) - Visão geral do projeto
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Guia de contribuição
-- [tests/README.md](tests/README.md) - Guia de testes
 - [docs/](docs/) - Documentação técnica completa
 
 ---
